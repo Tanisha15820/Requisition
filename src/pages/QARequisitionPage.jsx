@@ -95,6 +95,14 @@ const createEmptySheet3Rows = (count = 18) =>
 // Clean blank template state for all sheets across units
 const getInitialUnitData = () => ({
     Bawal: {
+        'Event Test Requisition': {
+            formData: createEmptyFormData(),
+            rows: createEmptyRows(18),
+        },
+        'General Test Requisition': {
+            formData: createEmptySheet3FormData(),
+            rows: createEmptySheet3Rows(18),
+        },
         'Sheet 1': {
             formData: createEmptyFormData(),
             rows: createEmptyRows(18),
@@ -109,6 +117,14 @@ const getInitialUnitData = () => ({
         },
     },
     Gujrat: {
+        'Event Test Requisition': {
+            formData: createEmptyFormData(),
+            rows: createEmptyRows(18),
+        },
+        'General Test Requisition': {
+            formData: createEmptySheet3FormData(),
+            rows: createEmptySheet3Rows(18),
+        },
         'Sheet 1': {
             formData: createEmptyFormData(),
             rows: createEmptyRows(18),
@@ -124,7 +140,7 @@ const getInitialUnitData = () => ({
     },
 });
 
-export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
+export default function QARequisitionPage({ defaultTab = 'Event Test Requisition' }) {
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -132,25 +148,20 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
     const [selectedUnit, setSelectedUnit] = useState('Bawal');
     const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
 
-    // 3. Tab Switcher: 'Sheet 1', 'Sheet 2', 'Sheet 3'
+    // 2. Requisition Tabs: 'Event Test Requisition' & 'General Test Requisition'
+    const REQUISITION_TABS = [
+        { id: 'Event Test Requisition', label: 'Event Test Requisition' },
+        { id: 'General Test Requisition', label: 'General Test Requisition' },
+    ];
+
     const [activeTab, setActiveTab] = useState(
-        location.pathname === '/qasheet3' || defaultTab === 'Sheet 3'
-            ? 'Sheet 3'
-            : location.pathname === '/qasheet2' || defaultTab === 'Sheet 2'
-                ? 'Sheet 2'
-                : 'Sheet 1'
+        defaultTab === 'General Test Requisition' || defaultTab === 'Sheet 2'
+            ? 'General Test Requisition'
+            : 'Event Test Requisition'
     );
 
-    // Keep activeTab in sync if browser URL changes
-    useEffect(() => {
-        if (location.pathname === '/qasheet3') {
-            setActiveTab('Sheet 3');
-        } else if (location.pathname === '/qasheet2') {
-            setActiveTab('Sheet 2');
-        } else if (location.pathname === '/') {
-            setActiveTab('Sheet 1');
-        }
-    }, [location.pathname]);
+    // Sub-sheet selector for General Test Requisition ('Sheet 2')
+    const [generalSubSheet, setGeneralSubSheet] = useState('Sheet 2');
 
     // 4. Search query
     const [searchQuery, setSearchQuery] = useState('');
@@ -210,8 +221,6 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
             navigate('/qasheet3', { replace: true });
         } else if (tab === 'Sheet 2' && location.pathname !== '/qasheet2') {
             navigate('/qasheet2', { replace: true });
-        } else if (tab === 'Sheet 1' && location.pathname !== '/') {
-            navigate('/', { replace: true });
         }
     };
 
@@ -226,13 +235,18 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
             return;
         }
 
-        const currentSheet = unitData[selectedUnit][activeTab];
+        const currentSheet =
+            unitData[selectedUnit]?.[activeTab] ||
+            (activeTab === 'General Test Requisition' || activeTab === 'Sheet 3'
+                ? unitData[selectedUnit]?.['Sheet 3']
+                : unitData[selectedUnit]?.['Sheet 1']);
+        if (!currentSheet) return;
         const { formData, rows } = currentSheet;
 
         let csv = `sep=,\n`;
 
-        if (activeTab === 'Sheet 3') {
-            csv += `"REQUISITION SLIP FOR QA LAB - SHEET 3 (${selectedUnit.toUpperCase()})"\n`;
+        if (activeTab === 'General Test Requisition' || activeTab === 'Sheet 3') {
+            csv += `"REQUISITION SLIP FOR QA LAB - EVENT TEST REQUISITION (${selectedUnit.toUpperCase()})"\n`;
             csv += `"Date:","${formData.date || ''}","Time:","${formData.time || ''}"\n`;
             csv += `"New Development:","${formData.newDevelopment ? 'YES' : 'NO'}","CARV:","${formData.carv ? 'YES' : 'NO'}","Running Part:","${formData.runningPart ? 'YES' : 'NO'}","New applicator:","${formData.newApplicator ? 'YES' : 'NO'}"\n`;
             csv += `"Project Name:","${formData.projectName || ''}","Submission Frequency:","${formData.submissionFrequency || ''}"\n`;
@@ -259,7 +273,7 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
 
             csv += `\n"Deptt:","${formData.deptt || ''}","Request By:","${formData.requestBy || ''}","Checked By:","${formData.checkedBy || ''}","Verified By:","${formData.verifiedBy || 'Pankaj Kamra'}","Approved By:","${formData.approvedBy || 'Yadvendar Yadav'}"\n`;
         } else {
-            csv += `"Q.A. LAB REQUISITION SLIP - ${activeTab} (${selectedUnit.toUpperCase()})"\n`;
+            csv += `"Q.A. LAB REQUISITION SLIP - GENERAL TEST REQUISITION (${selectedUnit.toUpperCase()})"\n`;
             csv += `"Date:","${formData.date || ''}","Time:","${formData.time || ''}"\n`;
             csv += `"Project Name:","${formData.projectName || ''}","Submission Frequency:","${formData.submissionFrequency || ''}"\n`;
             csv += `"Part Name:","${formData.partName || ''}","Part No.:","${formData.partNo || ''}"\n`;
@@ -282,7 +296,7 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `QA_Requisition_${selectedUnit}_${activeTab.replace(/\s+/g, '')}.csv`;
+        a.download = `QA_Requisition_${selectedUnit}_${activeTab.replace(/\s+/g, '_')}.csv`;
         a.click();
         URL.revokeObjectURL(url);
 
@@ -297,9 +311,9 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
         }
 
         setUnitData((prev) => {
-            const currentRows = prev[selectedUnit][activeTab].rows;
+            const currentRows = prev[selectedUnit]?.[activeTab]?.rows || [];
             const newRow =
-                activeTab === 'Sheet 3'
+                activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3'
                     ? {
                         sNo: '',
                         requiredTest: '',
@@ -446,22 +460,26 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
                         </div>
                     </div>
 
-                    {/* 2. TAB SWITCHER: Rounded pill container with Sheet 1, Sheet 2, Sheet 3 */}
+                    {/* 2. REQUISITION TABS: Directly below Unit dropdown, matching reference style */}
                     <div className="flex items-center no-print">
-                        <div className="bg-[#F1F3F5] p-1 rounded-xl inline-flex gap-1 border border-slate-200/60 shadow-2xs">
-                            {['Sheet 1', 'Sheet 2', 'Sheet 3'].map((tab) => {
-                                const active = activeTab === tab;
+                        <div className="bg-[#F8FAFC] sm:bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1 inline-flex items-center gap-1 sm:gap-1.5 shadow-2xs">
+                            {REQUISITION_TABS.map((tab) => {
+                                const isActive = activeTab === tab.id;
                                 return (
                                     <button
-                                        key={tab}
+                                        key={tab.id}
                                         type="button"
-                                        onClick={() => handleTabChange(tab)}
-                                        className={`px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${active
-                                                ? 'bg-white text-slate-900 shadow-sm'
-                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-                                            }`}
+                                        onClick={() => {
+                                            setActiveTab(tab.id);
+                                            showToast(`Showing: ${tab.label}`);
+                                        }}
+                                        className={`px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+                                            isActive
+                                                ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent font-medium'
+                                        }`}
                                     >
-                                        {tab}
+                                        {tab.label}
                                     </button>
                                 );
                             })}
@@ -557,25 +575,25 @@ export default function QARequisitionPage({ defaultTab = 'Sheet 1' }) {
                         /* Active checksheet table covering full width */
                         <div className="w-full overflow-x-auto pb-4 pt-1">
                             <div className="w-full min-w-[760px] bg-white border-2 border-black shadow-md select-text text-black print:shadow-none print:border-2 print:border-black print:w-full">
-                                {activeTab === 'Sheet 3' ? (
+                                {activeTab === 'General Test Requisition' || activeTab === 'Sheet 3' ? (
                                     <QASheet3Table
                                         unit={selectedUnit}
-                                        formData={currentSheetData.formData}
-                                        rows={currentSheetData.rows}
+                                        formData={currentSheetData?.formData || createEmptySheet3FormData()}
+                                        rows={currentSheetData?.rows || createEmptySheet3Rows(18)}
                                         onFormChange={handleFormChange}
                                         onRowChange={handleRowChange}
                                         searchQuery={searchQuery}
                                     />
                                 ) : (
                                     <QASheetTable
-                                        sheetType={activeTab}
+                                        sheetType={activeTab === 'Event Test Requisition' ? 'Sheet 1' : activeTab}
                                         unit={selectedUnit}
-                                        formData={currentSheetData.formData}
-                                        rows={currentSheetData.rows}
+                                        formData={currentSheetData?.formData || createEmptyFormData()}
+                                        rows={currentSheetData?.rows || createEmptyRows(18)}
                                         onFormChange={handleFormChange}
                                         onRowChange={handleRowChange}
                                         searchQuery={searchQuery}
-                                        hasCompanyHeader={activeTab === 'Sheet 2'}
+                                        hasCompanyHeader={generalSubSheet === 'Sheet 2'}
                                     />
                                 )}
                             </div>

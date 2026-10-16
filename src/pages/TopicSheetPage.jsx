@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import QASheetTable from '../components/QASheetTable';
 import QASheet3Table from '../components/QASheet3Table';
 import {
     loadStoredTopics,
     saveStoredTopics,
-    createBlankTopicSheets
+    createBlankTopicSheets,
+    createEmptyFormData,
+    createEmptyRows,
+    createEmptySheet3FormData,
+    createEmptySheet3Rows,
 } from '../data/topicStore';
 import {
     ArrowLeft,
@@ -18,17 +22,15 @@ import {
     Printer
 } from 'lucide-react';
 
-export default function TopicSheetPage({ defaultTab = 'Sheet 1' }) {
+export default function TopicSheetPage({ defaultTab }) {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
-    // 1. Active Tab: 'Sheet 1', 'Sheet 2', 'Sheet 3'
-    const [activeTab, setActiveTab] = useState(defaultTab || 'Sheet 1');
-
-    // 3. Search query
+    // 1. Search query
     const [searchQuery, setSearchQuery] = useState('');
 
-    // 4. Zoom state
+    // 2. Zoom state
     const [zoom, setZoom] = useState(100);
 
     const handleZoomIn = () => {
@@ -43,14 +45,14 @@ export default function TopicSheetPage({ defaultTab = 'Sheet 1' }) {
         setZoom(100);
     };
 
-    // 5. Toast notification
+    // 3. Toast notification
     const [toastMessage, setToastMessage] = useState('');
     const showToast = (msg) => {
         setToastMessage(msg);
         setTimeout(() => setToastMessage(''), 3500);
     };
 
-    // 6. Load topic and its sheets
+    // 4. Load topic and its sheets
     const [topics, setTopics] = useState(loadStoredTopics());
 
     // Find current topic or create a fallback
@@ -59,6 +61,7 @@ export default function TopicSheetPage({ defaultTab = 'Sheet 1' }) {
         topic: 'Q.A. LAB REQUISITION',
         unit: 'Bawal',
         category: 'Plant',
+        requisitionType: 'Event Test Requisition',
         description: '',
         date: '14 Oct 2026',
         time: '12:00 PM',
@@ -67,9 +70,44 @@ export default function TopicSheetPage({ defaultTab = 'Sheet 1' }) {
         sheets: createBlankTopicSheets(),
     };
 
+    // Determine requisition type (Event Test Requisition vs General Test Requisition)
+    const routeReqType = location.state?.requisitionType;
+    const requisitionType =
+        routeReqType ||
+        currentTopic.requisitionType ||
+        (currentTopic.topic === 'Testing' ||
+        currentTopic.topic === 'Testing 2' ||
+        currentTopic.topic?.toLowerCase().includes('general') ||
+        currentTopic.topic?.toLowerCase().includes('routine')
+            ? 'General Test Requisition'
+            : 'Event Test Requisition');
+
+    const isEvent = requisitionType === 'Event Test Requisition';
+    const isGeneral = requisitionType === 'General Test Requisition';
+
+    // Sheet selection logic:
+    // Event Test Requisition -> only Sheet 1.
+    // General Test Requisition -> only Sheet 3.
+    const targetDefault = defaultTab || (isGeneral ? 'Sheet 3' : 'Sheet 1');
+    const [activeTab, setActiveTab] = useState(targetDefault);
+
+    useEffect(() => {
+        if (isEvent && activeTab !== 'Sheet 1') {
+            setActiveTab('Sheet 1');
+        } else if (isGeneral && activeTab !== 'Sheet 3') {
+            setActiveTab('Sheet 3');
+        } else if (defaultTab && activeTab !== defaultTab) {
+            setActiveTab(defaultTab);
+        }
+    }, [id, requisitionType, defaultTab]);
+
     // Ensure topic has sheets object initialized
     const sheetsData = currentTopic.sheets || createBlankTopicSheets();
-    const currentSheet = sheetsData[activeTab] || { formData: {}, rows: [] };
+    const currentSheet =
+        sheetsData[activeTab] ||
+        (activeTab === 'Sheet 3'
+            ? { formData: createEmptySheet3FormData(), rows: createEmptySheet3Rows(18) }
+            : { formData: createEmptyFormData(), rows: createEmptyRows(18) });
 
     // Handler to update form data for the active sheet in this topic
     const handleFormChange = (field, value) => {
@@ -306,26 +344,11 @@ export default function TopicSheetPage({ defaultTab = 'Sheet 1' }) {
                         </div>
                     </div>
 
-                    {/* TAB SWITCHER: Sheet 1, Sheet 2, Sheet 3 */}
-                    <div className="flex items-center no-print overflow-x-auto pb-1 max-w-full">
-                        <div className="bg-[#F1F3F5] p-1 rounded-xl inline-flex gap-1 border border-slate-200/60 shadow-2xs">
-                            {['Sheet 1', 'Sheet 2', 'Sheet 3'].map((tab) => {
-                                const active = activeTab === tab;
-                                return (
-                                    <button
-                                        key={tab}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`px-3.5 sm:px-6 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${active
-                                                ? 'bg-white text-slate-900 shadow-sm'
-                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-                                            }`}
-                                    >
-                                        {tab}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    {/* Requisition Name at top under top bar */}
+                    <div className="pt-0.5 pb-1 no-print">
+                        <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                            {currentTopic.topic}
+                        </h2>
                     </div>
 
 

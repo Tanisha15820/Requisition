@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import RequisitionTablePage from './pages/RequisitionTablePage';
 import TopicSheetPage from './pages/TopicSheetPage';
+import QARequisitionPage from './pages/QARequisitionPage';
 
 function App() {
   return (
@@ -8,6 +9,9 @@ function App() {
       <Routes>
         {/* Main table view matching reference screenshot */}
         <Route path="/" element={<RequisitionTablePage />} />
+
+        {/* QA Requisition direct page */}
+        <Route path="/qa-requisition" element={<QARequisitionPage />} />
 
         {/* Dedicated checksheet page opened upon clicking a topic */}
         <Route path="/topic/:id" element={<TopicSheetPage />} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -9,6 +9,7 @@ import {
 } from '../data/topicStore';
 import {
     Building2,
+    Calendar,
     ChevronDown,
     FileSpreadsheet,
     Plus,
@@ -33,6 +34,13 @@ export default function RequisitionTablePage() {
     const [selectedUnit, setSelectedUnit] = useState('Bawal');
     const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
 
+    // 3. Requisition Type Tabs: 'Event Test Requisition' & 'General Test Requisition'
+    const REQUISITION_TABS = [
+        { id: 'Event Test Requisition', label: 'Event Test Requisition' },
+        { id: 'General Test Requisition', label: 'General Test Requisition' },
+    ];
+    const [activeTab, setActiveTab] = useState('Event Test Requisition');
+
     // 4. Search query
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -52,21 +60,72 @@ export default function RequisitionTablePage() {
 
     // 7. Add Requisition Modal state
     const [addModalOpen, setAddModalOpen] = useState(false);
+    const [newRequisitionType, setNewRequisitionType] = useState('Event Test Requisition');
     const [newTopicName, setNewTopicName] = useState('');
     const [newDescription, setNewDescription] = useState('');
+    const [newDepartment, setNewDepartment] = useState('');
+    const [newSection, setNewSection] = useState('');
     const [newCreatedBy, setNewCreatedBy] = useState('JOY DASTIDAR (ST08...)');
     const [newCreatedId, setNewCreatedId] = useState('ST080014');
 
-    // Filter topics based on selectedUnit and searchQuery
+    // 8. Date Selector / Filter state for Table Page
+    const [selectedDateFilter, setSelectedDateFilter] = useState('');
+    const dateInputRef = useRef(null);
+
+    const handleOpenDatePicker = () => {
+        if (dateInputRef.current) {
+            if (typeof dateInputRef.current.showPicker === 'function') {
+                try {
+                    dateInputRef.current.showPicker();
+                    return;
+                } catch (err) {
+                    console.warn('showPicker error, fallback to focus:', err);
+                }
+            }
+            dateInputRef.current.focus();
+        }
+    };
+
+    const formatDisplayDate = (isoDate) => {
+        if (!isoDate) return '';
+        try {
+            const [year, month, day] = isoDate.split('-').map(Number);
+            if (!year || !month || !day) return isoDate;
+            const d = new Date(year, month - 1, day);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch {
+            return isoDate;
+        }
+    };
+
+    // Filter topics based on selectedUnit, activeTab, selectedDateFilter, and searchQuery
     const filteredTopics = topics.filter((t) => {
         if (selectedUnit && t.unit !== selectedUnit) return false;
+        const itemType = t.requisitionType || (
+            t.topic === 'Testing' || t.topic === 'Testing 2' || t.topic?.toLowerCase().includes('general') || t.topic?.toLowerCase().includes('routine')
+                ? 'General Test Requisition'
+                : 'Event Test Requisition'
+        );
+        if (itemType !== activeTab) return false;
+
+        // Date Filter
+        if (selectedDateFilter) {
+            const formattedFilter = formatDisplayDate(selectedDateFilter);
+            if (t.date !== formattedFilter && t.date !== selectedDateFilter) {
+                return false;
+            }
+        }
+
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             const matchTopic = t.topic.toLowerCase().includes(q);
-            const matchDesc = t.description.toLowerCase().includes(q);
-            const matchId = t.id.toLowerCase().includes(q);
-            const matchUser = t.createdByName.toLowerCase().includes(q) || t.createdById.toLowerCase().includes(q);
-            return matchTopic || matchDesc || matchId || matchUser;
+            const matchDesc = t.description?.toLowerCase().includes(q);
+            const matchId = t.id?.toLowerCase().includes(q);
+            const matchUser = t.createdByName?.toLowerCase().includes(q) || t.createdById?.toLowerCase().includes(q);
+            const matchEvent = t.eventTrigger?.toLowerCase().includes(q);
+            const matchDept = t.department?.toLowerCase().includes(q);
+            const matchSec = t.section?.toLowerCase().includes(q);
+            return matchTopic || matchDesc || matchId || matchUser || matchEvent || matchDept || matchSec;
         }
         return true;
     });
@@ -75,7 +134,7 @@ export default function RequisitionTablePage() {
     const handleCreateTopic = (e) => {
         e.preventDefault();
         if (!newTopicName.trim()) {
-            showToast('Please enter a Requisition Name.');
+            showToast('Please enter Requisition Details.');
             return;
         }
 
@@ -92,8 +151,12 @@ export default function RequisitionTablePage() {
             id: generatedId,
             unit: selectedUnit || 'Bawal',
             category: 'Plant',
+            requisitionType: newRequisitionType || activeTab,
+            eventTrigger: (newRequisitionType || activeTab) === 'Event Test Requisition' ? 'New Development' : '',
             topic: newTopicName.trim(),
             description: newDescription.trim() || newTopicName.trim(),
+            department: newDepartment.trim(),
+            section: newSection.trim(),
             date: dateStr,
             time: timeStr,
             createdByName: newCreatedBy,
@@ -103,14 +166,30 @@ export default function RequisitionTablePage() {
             sheets: createBlankTopicSheets(),
         };
 
+        // Populate department and date in sheets formData
+        if (newRecord.sheets) {
+            Object.keys(newRecord.sheets).forEach((k) => {
+                if (newRecord.sheets[k]?.formData) {
+                    if (newDepartment.trim()) {
+                        newRecord.sheets[k].formData.deptt = newDepartment.trim();
+                    }
+                    if (dateStr) {
+                        newRecord.sheets[k].formData.date = dateStr;
+                    }
+                }
+            });
+        }
+
         const updated = [newRecord, ...topics];
         setTopics(updated);
         saveStoredTopics(updated);
         setAddModalOpen(false);
         setNewTopicName('');
         setNewDescription('');
+        setNewDepartment('');
+        setNewSection('');
 
-        showToast(`Created new Requisition record: "${newRecord.topic}"`);
+        showToast(`Created new ${newRecord.requisitionType}: "${newRecord.topic}"`);
     };
 
     // Clone topic
@@ -145,22 +224,23 @@ export default function RequisitionTablePage() {
     // Export Excel/CSV of table list
     const handleExportTableExcel = () => {
         let csv = `sep=,\n`;
-        csv += `"REQUISITION RECORDS LIST - UNIT: ${(selectedUnit || 'ALL').toUpperCase()}"\n\n`;
-        csv += `"S.NO","REQUISITION NAME","DESCRIPTION","DATE","TIME","CREATED BY","EMPLOYEE ID"\n`;
+        csv += `"${activeTab.toUpperCase()} RECORDS LIST - UNIT: ${(selectedUnit || 'ALL').toUpperCase()}"\n\n`;
+        csv += `"S.NO","REQUISITION NAME","TYPE / TRIGGER","DESCRIPTION","DATE","TIME","CREATED BY","EMPLOYEE ID"\n`;
 
         filteredTopics.forEach((t, i) => {
-            csv += `"${i + 1}","${t.topic.replace(/"/g, '""')}","${t.description.replace(/"/g, '""')}","${t.date}","${t.time}","${t.createdByName}","${t.createdById}"\n`;
+            const trigger = t.eventTrigger || (t.requisitionType || activeTab);
+            csv += `"${i + 1}","${t.topic.replace(/"/g, '""')}","${trigger.replace(/"/g, '""')}","${t.description.replace(/"/g, '""')}","${t.date}","${t.time}","${t.createdByName}","${t.createdById}"\n`;
         });
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Requisition_Records_${selectedUnit || 'All'}.csv`;
+        a.download = `${activeTab.replace(/\s+/g, '_')}_Records_${selectedUnit || 'All'}.csv`;
         a.click();
         URL.revokeObjectURL(url);
 
-        showToast('Exported records table to CSV successfully!');
+        showToast(`Exported ${activeTab} table to CSV successfully!`);
     };
 
     return (
@@ -289,6 +369,31 @@ export default function RequisitionTablePage() {
                             </div>
                         </div>
 
+                        {/* 2. REQUISITION TABS: Directly below Unit dropdown, matching reference style */}
+                        <div className="flex items-center no-print">
+                            <div className="bg-[#F8FAFC] sm:bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1 inline-flex items-center gap-1 sm:gap-1.5 shadow-2xs">
+                                {REQUISITION_TABS.map((tab) => {
+                                    const isActive = activeTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveTab(tab.id);
+                                                showToast(`Showing: ${tab.label}`);
+                                            }}
+                                            className={`px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${isActive
+                                                    ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs'
+                                                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent font-medium'
+                                                }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         {/* 3. SEARCH & ACTION BUTTON BAR */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                             {/* Search bar matching reference screenshot */}
@@ -313,8 +418,56 @@ export default function RequisitionTablePage() {
                                 )}
                             </div>
 
-                            {/* Action Buttons: Export Excel + Add Requisition */}
+                            {/* Action Buttons: Date Selector + Export Excel + Add Requisition */}
                             <div className="flex items-center gap-2 w-full sm:w-auto">
+                                {/* Date Selector / Date Picker Button */}
+                                <div className="relative flex-1 sm:flex-initial">
+                                    <button
+                                        type="button"
+                                        onClick={handleOpenDatePicker}
+                                        className={`flex items-center justify-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl border transition-all shadow-2xs cursor-pointer select-none text-xs sm:text-sm font-medium ${selectedDateFilter
+                                                ? 'border-blue-300 bg-blue-50/70 text-blue-800'
+                                                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                            }`}
+                                        title="Filter Records by Date"
+                                    >
+                                        <Calendar className={`w-4 h-4 flex-shrink-0 ${selectedDateFilter ? 'text-blue-600' : 'text-slate-500'}`} />
+                                        <span className="whitespace-nowrap">
+                                            {selectedDateFilter ? formatDisplayDate(selectedDateFilter) : 'Date'}
+                                        </span>
+                                        {selectedDateFilter && (
+                                            <span
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedDateFilter('');
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.stopPropagation();
+                                                        setSelectedDateFilter('');
+                                                    }
+                                                }}
+                                                className="relative z-10 p-0.5 text-slate-400 hover:text-slate-600 hover:bg-blue-100 rounded-full cursor-pointer ml-0.5"
+                                                title="Clear date filter"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </span>
+                                        )}
+                                    </button>
+                                    <input
+                                        ref={dateInputRef}
+                                        id="table-date-filter"
+                                        type="date"
+                                        value={selectedDateFilter}
+                                        onChange={(e) => setSelectedDateFilter(e.target.value)}
+                                        className="absolute inset-0 opacity-0 pointer-events-none w-full h-full"
+                                        tabIndex={-1}
+                                        aria-hidden="true"
+                                    />
+                                </div>
+
                                 <button
                                     type="button"
                                     onClick={handleExportTableExcel}
@@ -327,7 +480,10 @@ export default function RequisitionTablePage() {
 
                                 <button
                                     type="button"
-                                    onClick={() => setAddModalOpen(true)}
+                                    onClick={() => {
+                                        setNewRequisitionType(activeTab);
+                                        setAddModalOpen(true);
+                                    }}
                                     className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm shadow-blue-500/25 cursor-pointer"
                                     title="Add New Requisition"
                                 >
@@ -394,7 +550,7 @@ export default function RequisitionTablePage() {
                                             {filteredTopics.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={7} className="py-12 text-center text-slate-400">
-                                                        No Requisition items found for {selectedUnit || 'all units'}. Click "+ Requisition" to create one.
+                                                        No {activeTab} items found for {selectedUnit || 'all units'}. Click "+ Requisition" to create one.
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -410,16 +566,23 @@ export default function RequisitionTablePage() {
                                                             </div>
                                                         </td>
 
-                                                        {/* Requisition Name with Clickable link */}
+                                                        {/* Requisition Name with Clickable link & Event trigger badge */}
                                                         <td className="py-3.5 px-4">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => navigate(`/topic/${item.id}`)}
-                                                                className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer transition-colors block text-sm"
-                                                                title="Open checksheets for this requisition"
-                                                            >
-                                                                {item.topic}
-                                                            </button>
+                                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => navigate(`/topic/${item.id}`, { state: { requisitionType: item.requisitionType || activeTab } })}
+                                                                    className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer transition-colors block text-sm"
+                                                                    title="Open checksheets for this requisition"
+                                                                >
+                                                                    {item.topic}
+                                                                </button>
+                                                                {item.eventTrigger && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60 w-fit">
+                                                                        {item.eventTrigger}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
 
                                                         {/* DESCRIPTION */}
@@ -464,7 +627,7 @@ export default function RequisitionTablePage() {
                                                                 {/* Edit / Open Checksheets */}
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => navigate(`/topic/${item.id}`)}
+                                                                    onClick={() => navigate(`/topic/${item.id}`, { state: { requisitionType: item.requisitionType || activeTab } })}
                                                                     className="p-1.5 rounded-lg hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                                                                     title="Edit / Open Checksheets"
                                                                 >
@@ -489,7 +652,7 @@ export default function RequisitionTablePage() {
                                     </table>
                                 </div>
 
-                                {/* Pagination matching screenshot: Showing 1 to 3 of 3 Requisition items */}
+                                {/* Pagination matching screenshot */}
                                 <div className="px-4 sm:px-5 py-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 bg-white">
                                     <span className="text-center sm:text-left">
                                         Showing{' '}
@@ -504,7 +667,7 @@ export default function RequisitionTablePage() {
                                         <strong className="text-slate-800">
                                             {filteredTopics.length}
                                         </strong>{' '}
-                                        Requisition items
+                                        {activeTab} items
                                     </span>
                                     <div className="flex items-center gap-1">
                                         <button
@@ -553,16 +716,62 @@ export default function RequisitionTablePage() {
                         <form onSubmit={handleCreateTopic} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                                    Requisition Name *
+                                    Requisition Details *
                                 </label>
                                 <input
                                     type="text"
                                     required
                                     value={newTopicName}
                                     onChange={(e) => setNewTopicName(e.target.value)}
-                                    placeholder="Enter Requisition Name"
+                                    placeholder="Enter Requisition Details"
                                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                                        Department
+                                    </label>
+                                    <input
+                                        type="text"
+                                        list="department-options"
+                                        value={newDepartment}
+                                        onChange={(e) => setNewDepartment(e.target.value)}
+                                        placeholder="e.g. Quality Assurance / QA"
+                                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    />
+                                    <datalist id="department-options">
+                                        <option value="Quality Assurance (QA)" />
+                                        <option value="Quality Control (QC)" />
+                                        <option value="Production" />
+                                        <option value="Engineering" />
+                                        <option value="R&D / New Development" />
+                                        <option value="Maintenance" />
+                                    </datalist>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                                        Section
+                                    </label>
+                                    <input
+                                        type="text"
+                                        list="section-options"
+                                        value={newSection}
+                                        onChange={(e) => setNewSection(e.target.value)}
+                                        placeholder="e.g. QA Testing Lab"
+                                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    />
+                                    <datalist id="section-options">
+                                        <option value="QA Testing Lab" />
+                                        <option value="Wire Harness Assembly" />
+                                        <option value="Applicator & Tooling" />
+                                        <option value="Component Inspection" />
+                                        <option value="Pre-Production / Sampling" />
+                                        <option value="In-Process QA" />
+                                    </datalist>
+                                </div>
                             </div>
 
                             <div>
@@ -580,17 +789,19 @@ export default function RequisitionTablePage() {
 
                             <div>
                                 <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                                    Plant / Unit
+                                    Requisition Type *
                                 </label>
                                 <select
-                                    value={selectedUnit || 'Bawal'}
-                                    onChange={(e) => setSelectedUnit(e.target.value)}
-                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={newRequisitionType}
+                                    onChange={(e) => setNewRequisitionType(e.target.value)}
+                                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 >
-                                    <option value="Bawal">Bawal</option>
-                                    <option value="Gujrat">Gujrat</option>
+                                    <option value="Event Test Requisition">Event Test Requisition</option>
+                                    <option value="General Test Requisition">General Test Requisition</option>
                                 </select>
                             </div>
+
+
 
                             <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
                                 <button
