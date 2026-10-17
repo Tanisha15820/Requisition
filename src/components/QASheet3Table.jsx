@@ -57,6 +57,16 @@ export default function QASheet3Table({
             </colgroup>
 
             <tbody>
+                {/* TOP HEADER ROW: FURUKAWA MINDA ELECTRIC PVT. LTD. */}
+                <tr style={{ height: '26px' }}>
+                    <td
+                        colSpan={6}
+                        className="border-b border-black px-3 py-1 text-right align-middle font-bold text-[13px] sm:text-[14px] uppercase tracking-wide text-black bg-white"
+                    >
+                        FURUKAWA MINDA ELECTRIC PVT. LTD.
+                    </td>
+                </tr>
+
                 {/* HEADER SECTION (Row 1: Main Title + 2-Row Date/Time, Row 2: 4 Option Boxes with ☐) */}
                 <tr className="p-0 border-0">
                     <td colSpan={6} className="p-0 border-0" style={{ padding: 0 }}>

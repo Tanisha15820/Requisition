@@ -130,6 +130,18 @@ export default function RequisitionTablePage() {
         return true;
     });
 
+    // Open sheet redirection helper
+    const handleOpenTopic = (item) => {
+        const reqType = item.requisitionType || activeTab;
+        const targetSheet = reqType === 'Event Test Requisition' ? 'Sheet 3' : 'Sheet 1';
+        navigate(`/topic/${item.id}`, {
+            state: {
+                requisitionType: reqType,
+                defaultTab: targetSheet,
+            },
+        });
+    };
+
     // Handle adding a new Requisition item
     const handleCreateTopic = (e) => {
         e.preventDefault();
@@ -571,7 +583,7 @@ export default function RequisitionTablePage() {
                                                             <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => navigate(`/topic/${item.id}`, { state: { requisitionType: item.requisitionType || activeTab } })}
+                                                                    onClick={() => handleOpenTopic(item)}
                                                                     className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer transition-colors block text-sm"
                                                                     title="Open checksheets for this requisition"
                                                                 >
@@ -627,7 +639,7 @@ export default function RequisitionTablePage() {
                                                                 {/* Edit / Open Checksheets */}
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => navigate(`/topic/${item.id}`, { state: { requisitionType: item.requisitionType || activeTab } })}
+                                                                    onClick={() => handleOpenTopic(item)}
                                                                     className="p-1.5 rounded-lg hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                                                                     title="Edit / Open Checksheets"
                                                                 >

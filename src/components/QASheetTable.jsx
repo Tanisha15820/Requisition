@@ -55,17 +55,15 @@ export default function QASheetTable({
             </colgroup>
 
             <tbody>
-                {/* Optional Company Header for Sheet 2 */}
-                {hasCompanyHeader && (
-                    <tr style={{ height: '14px' }}>
-                        <td
-                            colSpan={9}
-                            className="border-b border-black px-1 py-0 text-right align-middle font-bold text-[11px] leading-none text-black"
-                        >
-                            FURUKAWA MINDA ELECTRIC PVT. LTD.
-                        </td>
-                    </tr>
-                )}
+                {/* TOP HEADER ROW: FURUKAWA MINDA ELECTRIC PVT. LTD. */}
+                <tr style={{ height: '26px' }}>
+                    <td
+                        colSpan={9}
+                        className="border-b border-black px-3 py-1 text-right align-middle font-bold text-[13px] sm:text-[14px] uppercase tracking-wide text-black bg-white"
+                    >
+                        FURUKAWA MINDA ELECTRIC PVT. LTD.
+                    </td>
+                </tr>
 
                 {/* ROW 1 & 2: Header Title + Date / Time Box */}
                 <tr style={{ height: '24px' }}>

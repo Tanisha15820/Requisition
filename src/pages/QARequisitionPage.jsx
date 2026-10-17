@@ -96,12 +96,12 @@ const createEmptySheet3Rows = (count = 18) =>
 const getInitialUnitData = () => ({
     Bawal: {
         'Event Test Requisition': {
-            formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
-        },
-        'General Test Requisition': {
             formData: createEmptySheet3FormData(),
             rows: createEmptySheet3Rows(18),
+        },
+        'General Test Requisition': {
+            formData: createEmptyFormData(),
+            rows: createEmptyRows(18),
         },
         'Sheet 1': {
             formData: createEmptyFormData(),
@@ -118,12 +118,12 @@ const getInitialUnitData = () => ({
     },
     Gujrat: {
         'Event Test Requisition': {
-            formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
-        },
-        'General Test Requisition': {
             formData: createEmptySheet3FormData(),
             rows: createEmptySheet3Rows(18),
+        },
+        'General Test Requisition': {
+            formData: createEmptyFormData(),
+            rows: createEmptyRows(18),
         },
         'Sheet 1': {
             formData: createEmptyFormData(),
@@ -155,7 +155,7 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
     ];
 
     const [activeTab, setActiveTab] = useState(
-        defaultTab === 'General Test Requisition' || defaultTab === 'Sheet 2'
+        defaultTab === 'General Test Requisition' || defaultTab === 'Sheet 1' || defaultTab === 'Sheet 2'
             ? 'General Test Requisition'
             : 'Event Test Requisition'
     );
@@ -237,7 +237,7 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
 
         const currentSheet =
             unitData[selectedUnit]?.[activeTab] ||
-            (activeTab === 'General Test Requisition' || activeTab === 'Sheet 3'
+            (activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3'
                 ? unitData[selectedUnit]?.['Sheet 3']
                 : unitData[selectedUnit]?.['Sheet 1']);
         if (!currentSheet) return;
@@ -245,7 +245,7 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
 
         let csv = `sep=,\n`;
 
-        if (activeTab === 'General Test Requisition' || activeTab === 'Sheet 3') {
+        if (activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3') {
             csv += `"REQUISITION SLIP FOR QA LAB - EVENT TEST REQUISITION (${selectedUnit.toUpperCase()})"\n`;
             csv += `"Date:","${formData.date || ''}","Time:","${formData.time || ''}"\n`;
             csv += `"New Development:","${formData.newDevelopment ? 'YES' : 'NO'}","CARV:","${formData.carv ? 'YES' : 'NO'}","Running Part:","${formData.runningPart ? 'YES' : 'NO'}","New applicator:","${formData.newApplicator ? 'YES' : 'NO'}"\n`;
@@ -575,7 +575,7 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                         /* Active checksheet table covering full width */
                         <div className="w-full overflow-x-auto pb-4 pt-1">
                             <div className="w-full min-w-[760px] bg-white border-2 border-black shadow-md select-text text-black print:shadow-none print:border-2 print:border-black print:w-full">
-                                {activeTab === 'General Test Requisition' || activeTab === 'Sheet 3' ? (
+                                {activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3' ? (
                                     <QASheet3Table
                                         unit={selectedUnit}
                                         formData={currentSheetData?.formData || createEmptySheet3FormData()}
@@ -586,7 +586,7 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                                     />
                                 ) : (
                                     <QASheetTable
-                                        sheetType={activeTab === 'Event Test Requisition' ? 'Sheet 1' : activeTab}
+                                        sheetType={activeTab === 'General Test Requisition' ? 'Sheet 1' : activeTab}
                                         unit={selectedUnit}
                                         formData={currentSheetData?.formData || createEmptyFormData()}
                                         rows={currentSheetData?.rows || createEmptyRows(18)}

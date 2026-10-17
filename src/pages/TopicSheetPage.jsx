@@ -86,20 +86,21 @@ export default function TopicSheetPage({ defaultTab }) {
     const isGeneral = requisitionType === 'General Test Requisition';
 
     // Sheet selection logic:
-    // Event Test Requisition -> only Sheet 1.
-    // General Test Requisition -> only Sheet 3.
-    const targetDefault = defaultTab || (isGeneral ? 'Sheet 3' : 'Sheet 1');
+    // Event Test Requisition -> Event Test sheet (Sheet 3)
+    // General Test Requisition -> General Test sheet (Sheet 1)
+    const effectiveDefaultTab = defaultTab || location.state?.defaultTab;
+    const targetDefault = effectiveDefaultTab || (isEvent ? 'Sheet 3' : 'Sheet 1');
     const [activeTab, setActiveTab] = useState(targetDefault);
 
     useEffect(() => {
-        if (isEvent && activeTab !== 'Sheet 1') {
-            setActiveTab('Sheet 1');
-        } else if (isGeneral && activeTab !== 'Sheet 3') {
+        if (effectiveDefaultTab && activeTab !== effectiveDefaultTab) {
+            setActiveTab(effectiveDefaultTab);
+        } else if (isEvent && activeTab !== 'Sheet 3') {
             setActiveTab('Sheet 3');
-        } else if (defaultTab && activeTab !== defaultTab) {
-            setActiveTab(defaultTab);
+        } else if (isGeneral && activeTab !== 'Sheet 1') {
+            setActiveTab('Sheet 1');
         }
-    }, [id, requisitionType, defaultTab]);
+    }, [id, requisitionType, effectiveDefaultTab]);
 
     // Ensure topic has sheets object initialized
     const sheetsData = currentTopic.sheets || createBlankTopicSheets();
