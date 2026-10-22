@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import logoImg from '../assets/images/logo.png';
 
-export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, setMobileOpen = () => {} }) {
+export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, setMobileOpen = () => { } }) {
     return (
         <>
             {/* Mobile backdrop overlay */}
@@ -20,11 +20,9 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
             )}
 
             <aside
-                className={`fixed top-0 left-0 h-screen bg-white border-r border-[#E9ECEF] flex flex-col z-50 md:z-30 transition-all duration-300 select-none shadow-sm ${
-                    collapsed ? 'md:w-20' : 'md:w-64'
-                } w-64 max-w-[85vw] ${
-                    mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-                }`}
+                className={`fixed top-0 left-0 h-screen bg-white border-r border-[#E9ECEF] flex flex-col z-50 md:z-30 transition-all duration-300 select-none shadow-sm ${collapsed ? 'md:w-20' : 'md:w-64'
+                    } w-64 max-w-[85vw] ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+                    }`}
             >
                 {/* Sidebar Header: Toggle button and Logo */}
                 <div className={`h-16 flex items-center border-b border-[#F1F3F5] transition-all px-3.5 gap-2.5 justify-between md:justify-start ${collapsed ? 'md:justify-center md:px-2' : ''}`}>
@@ -94,7 +92,6 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen = false, s
 
                     <div className="my-2 border-t border-slate-100"></div>
 
-                    {/* Single PDCA Page - Exactly matching the vibrant blue active rounded pill in the screenshot */}
                     <div className="relative group">
                         <Link
                             to="/"

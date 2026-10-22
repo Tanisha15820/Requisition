@@ -1,4 +1,7 @@
 import React from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import DatePickerInput from './DatePickerInput';
+import TimePickerInput from './TimePickerInput';
 
 export default function QASheet3Table({
     unit = 'Bawal',
@@ -6,8 +9,37 @@ export default function QASheet3Table({
     rows = [],
     onFormChange,
     onRowChange,
+    onAddRow,
+    onDeleteRow,
     searchQuery = '',
 }) {
+    // S.No. table displays active rows, defaulting to 5 blank rows if empty
+    const displayRows = React.useMemo(() => {
+        if (Array.isArray(rows) && rows.length > 0) {
+            return rows;
+        }
+        return Array.from({ length: 5 }, (_, idx) => ({
+            sNo: `${idx + 1}`,
+            requiredTest: '',
+            standardName: '',
+            actual: '',
+            status: '',
+            remarks: '',
+        }));
+    }, [rows]);
+
+    const handleAdd = (idx) => {
+        if (onAddRow) {
+            onAddRow(idx);
+        }
+    };
+
+    const handleDelete = (idx) => {
+        if (onDeleteRow) {
+            onDeleteRow(idx);
+        }
+    };
+
     const isRowMatch = (row) => {
         if (!searchQuery) return false;
         const q = searchQuery.toLowerCase();
@@ -37,20 +69,22 @@ export default function QASheet3Table({
                 fontFamily: "Arial, 'Segoe UI', Helvetica, sans-serif",
             }}
         >
-            {/* 6 Columns matching the table section and aligned with the 50% center-divider:
+            {/* 7 Columns matching the table section and aligned with the 50% center-divider:
                 Left half (50%):
-                  Col 1: S. No. (~6%)
-                  Col 2: Required test (~18%)
-                  Col 3: Standard Name/Drawing/MISP/ISP (~26%)
+                  Col 1: Actions (~5%)
+                  Col 2: S. No. (~5%)
+                  Col 3: Required test (~16%)
+                  Col 4: Standard Name/Drawing/MISP/ISP (~24%)
                 Right half (50%):
-                  Col 4: Actual (~32%)
-                  Col 5: Status (~9%)
-                  Col 6: Remarks (~9%)
+                  Col 5: Actual (~32%)
+                  Col 6: Status (~9%)
+                  Col 7: Remarks (~9%)
             */}
             <colgroup>
-                <col style={{ width: '6%' }} />
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '26%' }} />
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '24%' }} />
                 <col style={{ width: '32%' }} />
                 <col style={{ width: '9%' }} />
                 <col style={{ width: '9%' }} />
@@ -60,7 +94,7 @@ export default function QASheet3Table({
                 {/* TOP HEADER ROW: FURUKAWA MINDA ELECTRIC PVT. LTD. */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={6}
+                        colSpan={7}
                         className="border-b border-black px-3 py-1 text-right align-middle font-bold text-[13px] sm:text-[14px] uppercase tracking-wide text-black bg-white"
                     >
                         FURUKAWA MINDA ELECTRIC PVT. LTD.
@@ -69,7 +103,7 @@ export default function QASheet3Table({
 
                 {/* HEADER SECTION (Row 1: Main Title + 2-Row Date/Time, Row 2: 4 Option Boxes with ☐) */}
                 <tr className="p-0 border-0">
-                    <td colSpan={6} className="p-0 border-0" style={{ padding: 0 }}>
+                    <td colSpan={7} className="p-0 border-0" style={{ padding: 0 }}>
                         <table
                             className="w-full border-collapse border-0 table-fixed text-[12px] leading-tight select-text text-black m-0"
                             style={{
@@ -105,14 +139,12 @@ export default function QASheet3Table({
                                         style={{ height: '28px' }}
                                     >
                                         <div className="flex items-center h-full px-2">
-                                            <span className="font-normal text-black whitespace-nowrap select-none">
+                                            <span className="font-normal text-black whitespace-nowrap select-none pr-1">
                                                 Date:
                                             </span>
-                                            <input
-                                                type="text"
+                                            <DatePickerInput
                                                 value={formData.date || ''}
-                                                onChange={(e) => onFormChange('date', e.target.value)}
-                                                className="w-full h-full bg-transparent border-0 outline-none px-1.5 text-black font-normal text-[12px] focus:bg-blue-50/50"
+                                                onChange={(val) => onFormChange('date', val)}
                                             />
                                         </div>
                                     </td>
@@ -125,14 +157,12 @@ export default function QASheet3Table({
                                         style={{ height: '28px' }}
                                     >
                                         <div className="flex items-center h-full px-2">
-                                            <span className="font-normal text-black whitespace-nowrap select-none">
+                                            <span className="font-normal text-black whitespace-nowrap select-none pr-1">
                                                 Time:
                                             </span>
-                                            <input
-                                                type="text"
+                                            <TimePickerInput
                                                 value={formData.time || ''}
-                                                onChange={(e) => onFormChange('time', e.target.value)}
-                                                className="w-full h-full bg-transparent border-0 outline-none px-1.5 text-black font-normal text-[12px] focus:bg-blue-50/50"
+                                                onChange={(val) => onFormChange('time', val)}
                                             />
                                         </div>
                                     </td>
@@ -222,7 +252,7 @@ export default function QASheet3Table({
                 {/* ROW 3: Project Name : | Submission Frequency : */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -258,7 +288,7 @@ export default function QASheet3Table({
                 {/* ROW 4: Part Name : | Part No. : */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -294,7 +324,7 @@ export default function QASheet3Table({
                 {/* ROW 5: Product Type : | No of Cavity: */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -330,7 +360,7 @@ export default function QASheet3Table({
                 {/* ROW 6: Lot No: | Nos. of Sample : */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -366,18 +396,16 @@ export default function QASheet3Table({
                 {/* ROW 7: Lot Date: | Manufacturing Location: */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
-                            <span className="font-normal text-black whitespace-nowrap select-none">
+                            <span className="font-normal text-black whitespace-nowrap select-none pr-1">
                                 Lot Date:
                             </span>
-                            <input
-                                type="text"
+                            <DatePickerInput
                                 value={formData.lotDate || ''}
-                                onChange={(e) => onFormChange('lotDate', e.target.value)}
-                                className="w-full h-full bg-transparent border-0 outline-none px-1 text-black font-normal text-[12px] focus:bg-blue-50/50"
+                                onChange={(val) => onFormChange('lotDate', val)}
                             />
                         </div>
                     </td>
@@ -402,7 +430,7 @@ export default function QASheet3Table({
                 {/* ROW 8: Material Name: | Material Grade/Class: */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -438,7 +466,7 @@ export default function QASheet3Table({
                 {/* ROW 9: FME Unique part: YES / NO | FAS Unique part: YES / NO */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black px-1.5 py-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center justify-between h-full select-none">
@@ -508,7 +536,7 @@ export default function QASheet3Table({
                 {/* ROW 10: Customer directed part: YES / NO | Supplier Inspection report: YES / NO */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black px-1.5 py-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center justify-between h-full select-none">
@@ -578,7 +606,7 @@ export default function QASheet3Table({
                 {/* ROW 11: MTC received: YES / NO | (blank cell) */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black px-1.5 py-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center justify-between h-full select-none">
@@ -616,7 +644,7 @@ export default function QASheet3Table({
                 {/* ROW 12: Part applicability matrix Received: YES / NO | Testing standard Received YES / NO */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black px-1.5 py-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center justify-between h-full select-none">
@@ -686,7 +714,7 @@ export default function QASheet3Table({
                 {/* ROW 13: Testing method YES / NO | Jig/Fixture requirement YES / NO */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black px-1.5 py-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center justify-between h-full select-none">
@@ -756,7 +784,7 @@ export default function QASheet3Table({
                 {/* ROW 14: PPAP Doc applicable: YES / NO | PPAP Doc Received: YES / NO */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black px-1.5 py-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center justify-between h-full select-none">
@@ -826,7 +854,7 @@ export default function QASheet3Table({
                 {/* ROW 15: Requested Name : | Received By : */}
                 <tr style={{ height: '26px' }}>
                     <td
-                        colSpan={3}
+                        colSpan={4}
                         className="border-b border-r border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -862,7 +890,7 @@ export default function QASheet3Table({
                 {/* ROW 16: Purpose for testing:- (full width) */}
                 <tr style={{ height: '28px' }}>
                     <td
-                        colSpan={6}
+                        colSpan={7}
                         className="border-b border-black p-0 align-middle text-[12px]"
                     >
                         <div className="flex items-center h-full px-1.5">
@@ -879,42 +907,69 @@ export default function QASheet3Table({
                     </td>
                 </tr>
 
-                {/* TABLE HEADER ROW: S. No. | Required test | Standard Name/Drawing/MISP/ISP || Actual | Status | Remarks */}
+                {/* TABLE HEADER ROW: Actions | S. No. | Required test | Standard Name/Drawing/MISP/ISP || Actual | Status | Remarks */}
                 <tr style={{ height: '30px' }} className="font-normal text-[12px] text-center bg-slate-50/40">
-                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal">
+                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal select-none">
+                        Actions
+                    </td>
+                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal select-none">
                         S. No.
                     </td>
-                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal">
+                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal select-none">
                         Required test
                     </td>
-                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal">
+                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal select-none">
                         Standard Name/Drawing/MISP/ISP
                     </td>
-                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal">
+                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal select-none">
                         Actual
                     </td>
-                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal">
+                    <td className="border-b border-r border-black p-1 text-center align-middle font-normal select-none">
                         Status
                     </td>
-                    <td className="border-b border-black p-1 text-center align-middle font-normal">
+                    <td className="border-b border-black p-1 text-center align-middle font-normal select-none">
                         Remarks
                     </td>
                 </tr>
 
-                {/* 18 DATA ROWS */}
-                {rows.map((row, idx) => {
+                {/* S.No. Data Rows */}
+                {displayRows.map((row, idx) => {
                     const matched = isRowMatch(row);
                     return (
                         <tr
                             key={idx}
-                            style={{ height: '24px' }}
-                            className={matched ? 'bg-amber-100/70 transition-colors' : ''}
+                            className={matched ? 'bg-amber-100/70 transition-colors' : 'hover:bg-blue-50/20'}
                         >
+                            {/* Actions Column */}
+                            <td className="border-b border-r border-black p-1 align-middle text-center bg-white">
+                                <div className="flex flex-col items-center justify-center gap-1 py-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAdd(idx)}
+                                        className="w-6 h-6 rounded-md border border-slate-300 bg-white hover:bg-blue-50 hover:border-blue-400 text-slate-500 hover:text-blue-600 flex items-center justify-center transition-colors cursor-pointer shadow-2xs group focus:outline-none"
+                                        title="Insert row above"
+                                        aria-label={`Insert row above row ${idx + 1}`}
+                                    >
+                                        <Plus className="w-3.5 h-3.5 stroke-[2] text-slate-500 group-hover:text-blue-600 transition-colors" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDelete(idx)}
+                                        className="w-6 h-6 rounded-md border border-slate-300 bg-white hover:bg-rose-50 hover:border-rose-400 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer shadow-2xs group focus:outline-none"
+                                        title="Delete row"
+                                        aria-label={`Delete row ${idx + 1}`}
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5 stroke-[1.8] text-slate-500 group-hover:text-rose-600 transition-colors" />
+                                    </button>
+                                </div>
+                            </td>
+
                             {/* S. No. */}
                             <td className="border-b border-r border-black p-0 align-middle">
                                 <input
                                     type="text"
-                                    value={row.sNo || ''}
+                                    value={row.sNo || `${idx + 1}`}
+                                    placeholder={`${idx + 1}`}
                                     onChange={(e) => onRowChange(idx, 'sNo', e.target.value)}
                                     className="w-full h-full bg-transparent border-0 outline-none px-1 text-center text-black font-normal text-[12px] focus:bg-blue-50/40"
                                 />
@@ -975,7 +1030,7 @@ export default function QASheet3Table({
 
                 {/* FOOTER SECTION: 5 Distinct Columns Matching Reference Screenshot */}
                 <tr className="p-0 border-0">
-                    <td colSpan={6} className="p-0 border-0" style={{ padding: 0 }}>
+                    <td colSpan={7} className="p-0 border-0" style={{ padding: 0 }}>
                         <table
                             className="w-full border-collapse border-0 table-fixed text-[12px] leading-tight select-text text-black m-0"
                             style={{

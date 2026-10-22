@@ -6,7 +6,6 @@ import {
     Building2,
     ChevronDown,
     FileSpreadsheet,
-    Plus,
     Search,
     Check,
     CheckCircle2,
@@ -31,9 +30,9 @@ const createEmptyFormData = () => ({
     approvedBy: '',
 });
 
-const createEmptyRows = (count = 18) =>
-    Array.from({ length: count }, () => ({
-        sNo: '',
+const createEmptyRows = (count = 5) =>
+    Array.from({ length: count }, (_, idx) => ({
+        sNo: `${idx + 1}`,
         characteristics: '',
         specified: '',
         actual: '',
@@ -82,9 +81,9 @@ const createEmptySheet3FormData = () => ({
     approvedBy: '',
 });
 
-const createEmptySheet3Rows = (count = 18) =>
-    Array.from({ length: count }, () => ({
-        sNo: '',
+const createEmptySheet3Rows = (count = 5) =>
+    Array.from({ length: count }, (_, idx) => ({
+        sNo: `${idx + 1}`,
         requiredTest: '',
         standardName: '',
         actual: '',
@@ -97,50 +96,50 @@ const getInitialUnitData = () => ({
     Bawal: {
         'Event Test Requisition': {
             formData: createEmptySheet3FormData(),
-            rows: createEmptySheet3Rows(18),
+            rows: createEmptySheet3Rows(5),
         },
         'General Test Requisition': {
             formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
+            rows: createEmptyRows(5),
         },
         'Sheet 1': {
             formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
+            rows: createEmptyRows(5),
         },
         'Sheet 2': {
             formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
+            rows: createEmptyRows(5),
         },
         'Sheet 3': {
             formData: createEmptySheet3FormData(),
-            rows: createEmptySheet3Rows(18),
+            rows: createEmptySheet3Rows(5),
         },
     },
     Gujrat: {
         'Event Test Requisition': {
             formData: createEmptySheet3FormData(),
-            rows: createEmptySheet3Rows(18),
+            rows: createEmptySheet3Rows(5),
         },
         'General Test Requisition': {
             formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
+            rows: createEmptyRows(5),
         },
         'Sheet 1': {
             formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
+            rows: createEmptyRows(5),
         },
         'Sheet 2': {
             formData: createEmptyFormData(),
-            rows: createEmptyRows(18),
+            rows: createEmptyRows(5),
         },
         'Sheet 3': {
             formData: createEmptySheet3FormData(),
-            rows: createEmptySheet3Rows(18),
+            rows: createEmptySheet3Rows(5),
         },
     },
 });
 
-export default function QARequisitionPage({ defaultTab = 'Event Test Requisition' }) {
+export default function QARequisitionPage({ defaultTab = 'General Test Requisition' }) {
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -148,16 +147,16 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
     const [selectedUnit, setSelectedUnit] = useState('Bawal');
     const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
 
-    // 2. Requisition Tabs: 'Event Test Requisition' & 'General Test Requisition'
+    // 2. Requisition Tabs: 'General Test Requisition' placed first on far left, 'Event Test Requisition' directly to its right
     const REQUISITION_TABS = [
-        { id: 'Event Test Requisition', label: 'Event Test Requisition' },
         { id: 'General Test Requisition', label: 'General Test Requisition' },
+        { id: 'Event Test Requisition', label: 'Event Test Requisition' },
     ];
 
     const [activeTab, setActiveTab] = useState(
-        defaultTab === 'General Test Requisition' || defaultTab === 'Sheet 1' || defaultTab === 'Sheet 2'
-            ? 'General Test Requisition'
-            : 'Event Test Requisition'
+        defaultTab === 'Event Test Requisition' || defaultTab === 'Sheet 3'
+            ? 'Event Test Requisition'
+            : 'General Test Requisition'
     );
 
     // Sub-sheet selector for General Test Requisition ('Sheet 2')
@@ -303,46 +302,87 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
         showToast(`Exported ${selectedUnit} ${activeTab} to CSV successfully!`);
     };
 
-    // Add a new row
-    const handleAddRequisition = () => {
-        if (!selectedUnit) {
-            showToast('Please select a unit first.');
-            return;
-        }
-
+    // Handler to insert a new blank row immediately above the specified row index
+    const handleAddRow = (index) => {
+        if (!selectedUnit) return;
         setUnitData((prev) => {
-            const currentRows = prev[selectedUnit]?.[activeTab]?.rows || [];
-            const newRow =
-                activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3'
-                    ? {
-                        sNo: '',
-                        requiredTest: '',
-                        standardName: '',
-                        actual: '',
-                        status: '',
-                        remarks: '',
-                    }
-                    : {
-                        sNo: '',
-                        characteristics: '',
-                        specified: '',
-                        actual: '',
-                        status: '',
-                        remarks: '',
-                    };
+            const unitObj = prev[selectedUnit] || {};
+            const sheetObj = unitObj[activeTab] || {};
+            const currentRows = [...(sheetObj.rows || [])];
+
+            const isSheet3 = activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3';
+            const newRow = isSheet3
+                ? {
+                    sNo: `${index + 1}`,
+                    requiredTest: '',
+                    standardName: '',
+                    actual: '',
+                    status: '',
+                    remarks: '',
+                }
+                : {
+                    sNo: `${index + 1}`,
+                    characteristics: '',
+                    specified: '',
+                    actual: '',
+                    status: '',
+                    remarks: '',
+                };
+
+            currentRows.splice(index, 0, newRow);
+            const reindexed = currentRows.map((r, idx) => ({
+                ...r,
+                sNo: `${idx + 1}`,
+            }));
+
             return {
                 ...prev,
                 [selectedUnit]: {
-                    ...prev[selectedUnit],
+                    ...unitObj,
                     [activeTab]: {
-                        ...prev[selectedUnit][activeTab],
-                        rows: [...currentRows, newRow],
+                        ...sheetObj,
+                        rows: reindexed,
                     },
                 },
             };
         });
+        showToast(`Inserted a new row above row ${index + 1}`);
+    };
 
-        showToast(`Added a new row to ${activeTab}!`);
+    // Handler to delete a specific row by index
+    const handleDeleteRow = (index) => {
+        if (!selectedUnit) return;
+        setUnitData((prev) => {
+            const unitObj = prev[selectedUnit] || {};
+            const sheetObj = unitObj[activeTab] || {};
+            let currentRows = [...(sheetObj.rows || [])];
+            currentRows.splice(index, 1);
+
+            const isSheet3 = activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3';
+            if (currentRows.length === 0) {
+                const blankRow = isSheet3
+                    ? { sNo: '1', requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }
+                    : { sNo: '1', characteristics: '', specified: '', actual: '', status: '', remarks: '' };
+                currentRows = [blankRow];
+            }
+
+            const reindexed = currentRows.map((r, idx) => ({
+                ...r,
+                sNo: `${idx + 1}`,
+            }));
+
+            return {
+                ...prev,
+                [selectedUnit]: {
+                    ...unitObj,
+                    [activeTab]: {
+                        ...sheetObj,
+                        rows: reindexed,
+                    },
+                },
+            };
+        });
+        showToast(`Deleted row ${index + 1}`);
     };
 
     // Get current data safely
@@ -460,22 +500,29 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                         </div>
                     </div>
 
-                    {/* 2. REQUISITION TABS: Directly below Unit dropdown, matching reference style */}
-                    <div className="flex items-center no-print">
-                        <div className="bg-[#F8FAFC] sm:bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1 inline-flex items-center gap-1 sm:gap-1.5 shadow-2xs">
+                    {/* 2. REQUISITION TABS: 'General Test Requisition' first on far left, 'Event Test Requisition' directly to its right */}
+                    <div className="flex items-center no-print max-w-full overflow-x-auto scrollbar-none pb-0.5">
+                        <div
+                            role="tablist"
+                            aria-label="Requisition Type Tabs"
+                            className="bg-[#F8FAFC] sm:bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1 inline-flex items-center gap-1 sm:gap-1.5 shadow-2xs flex-nowrap"
+                        >
                             {REQUISITION_TABS.map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 return (
                                     <button
                                         key={tab.id}
+                                        role="tab"
+                                        aria-selected={isActive}
+                                        id={`qa-tab-${tab.id.toLowerCase().replace(/\s+/g, '-')}`}
                                         type="button"
                                         onClick={() => {
                                             setActiveTab(tab.id);
                                             showToast(`Showing: ${tab.label}`);
                                         }}
-                                        className={`px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+                                        className={`px-3.5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap select-none flex-shrink-0 ${
                                             isActive
-                                                ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs'
+                                                ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
                                                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent font-medium'
                                         }`}
                                     >
@@ -510,7 +557,7 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                             )}
                         </div>
 
-                        {/* Action Buttons: Export Excel + Add Requisition */}
+                        {/* Action Buttons: Export Excel */}
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
@@ -520,16 +567,6 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                             >
                                 <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                                 <span>Export Excel</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleAddRequisition}
-                                className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm shadow-blue-500/25 cursor-pointer"
-                                title="Add New Requisition Row"
-                            >
-                                <Plus className="w-4 h-4 stroke-[2.5]" />
-                                <span>Add Requisition</span>
                             </button>
                         </div>
                     </div>
@@ -579,9 +616,11 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                                     <QASheet3Table
                                         unit={selectedUnit}
                                         formData={currentSheetData?.formData || createEmptySheet3FormData()}
-                                        rows={currentSheetData?.rows || createEmptySheet3Rows(18)}
+                                        rows={currentSheetData?.rows || createEmptySheet3Rows(5)}
                                         onFormChange={handleFormChange}
                                         onRowChange={handleRowChange}
+                                        onAddRow={handleAddRow}
+                                        onDeleteRow={handleDeleteRow}
                                         searchQuery={searchQuery}
                                     />
                                 ) : (
@@ -589,9 +628,11 @@ export default function QARequisitionPage({ defaultTab = 'Event Test Requisition
                                         sheetType={activeTab === 'General Test Requisition' ? 'Sheet 1' : activeTab}
                                         unit={selectedUnit}
                                         formData={currentSheetData?.formData || createEmptyFormData()}
-                                        rows={currentSheetData?.rows || createEmptyRows(18)}
+                                        rows={currentSheetData?.rows || createEmptyRows(5)}
                                         onFormChange={handleFormChange}
                                         onRowChange={handleRowChange}
+                                        onAddRow={handleAddRow}
+                                        onDeleteRow={handleDeleteRow}
                                         searchQuery={searchQuery}
                                         hasCompanyHeader={generalSubSheet === 'Sheet 2'}
                                     />

@@ -14,7 +14,6 @@ import {
 import {
     ArrowLeft,
     Save,
-    Plus,
     Search,
     CheckCircle2,
     X,
@@ -61,7 +60,7 @@ export default function TopicSheetPage({ defaultTab }) {
         topic: 'Q.A. LAB REQUISITION',
         unit: 'Bawal',
         category: 'Plant',
-        requisitionType: 'Event Test Requisition',
+        requisitionType: 'General Test Requisition',
         description: '',
         date: '14 Oct 2026',
         time: '12:00 PM',
@@ -107,8 +106,8 @@ export default function TopicSheetPage({ defaultTab }) {
     const currentSheet =
         sheetsData[activeTab] ||
         (activeTab === 'Sheet 3'
-            ? { formData: createEmptySheet3FormData(), rows: createEmptySheet3Rows(18) }
-            : { formData: createEmptyFormData(), rows: createEmptyRows(18) });
+            ? { formData: createEmptySheet3FormData(), rows: createEmptySheet3Rows(5) }
+            : { formData: createEmptyFormData(), rows: createEmptyRows(5) });
 
     // Handler to update form data for the active sheet in this topic
     const handleFormChange = (field, value) => {
@@ -166,38 +165,45 @@ export default function TopicSheetPage({ defaultTab }) {
         });
     };
 
-    // Add row to current sheet
-    const handleAddRow = () => {
+    // Handler to insert a new blank row immediately above the specified row index
+    const handleAddRow = (index) => {
         setTopics((prevTopics) => {
             const updated = prevTopics.map((t) => {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
-                    const currentRows = currentSheets[activeTab].rows || [];
-                    const newRow =
-                        activeTab === 'Sheet 3'
-                            ? {
-                                sNo: '',
-                                requiredTest: '',
-                                standardName: '',
-                                actual: '',
-                                status: '',
-                                remarks: '',
-                            }
-                            : {
-                                sNo: '',
-                                characteristics: '',
-                                specified: '',
-                                actual: '',
-                                status: '',
-                                remarks: '',
-                            };
+                    const currentRows = [...(currentSheets[activeTab]?.rows || [])];
+                    const isSheet3 = activeTab === 'Sheet 3';
+                    const newRow = isSheet3
+                        ? {
+                            sNo: `${index + 1}`,
+                            requiredTest: '',
+                            standardName: '',
+                            actual: '',
+                            status: '',
+                            remarks: '',
+                        }
+                        : {
+                            sNo: `${index + 1}`,
+                            characteristics: '',
+                            specified: '',
+                            actual: '',
+                            status: '',
+                            remarks: '',
+                        };
+
+                    currentRows.splice(index, 0, newRow);
+                    const reindexed = currentRows.map((r, idx) => ({
+                        ...r,
+                        sNo: `${idx + 1}`,
+                    }));
+
                     return {
                         ...t,
                         sheets: {
                             ...currentSheets,
                             [activeTab]: {
                                 ...currentSheets[activeTab],
-                                rows: [...currentRows, newRow],
+                                rows: reindexed,
                             },
                         },
                     };
@@ -207,8 +213,48 @@ export default function TopicSheetPage({ defaultTab }) {
             saveStoredTopics(updated);
             return updated;
         });
+        showToast(`Inserted a new row above row ${index + 1}`);
+    };
 
-        showToast(`Added a new row to ${activeTab}!`);
+    // Handler to delete a specific row by index
+    const handleDeleteRow = (index) => {
+        setTopics((prevTopics) => {
+            const updated = prevTopics.map((t) => {
+                if (t.id === currentTopic.id) {
+                    const currentSheets = t.sheets || createBlankTopicSheets();
+                    let currentRows = [...(currentSheets[activeTab]?.rows || [])];
+                    currentRows.splice(index, 1);
+
+                    const isSheet3 = activeTab === 'Sheet 3';
+                    if (currentRows.length === 0) {
+                        const blankRow = isSheet3
+                            ? { sNo: '1', requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }
+                            : { sNo: '1', characteristics: '', specified: '', actual: '', status: '', remarks: '' };
+                        currentRows = [blankRow];
+                    }
+
+                    const reindexed = currentRows.map((r, idx) => ({
+                        ...r,
+                        sNo: `${idx + 1}`,
+                    }));
+
+                    return {
+                        ...t,
+                        sheets: {
+                            ...currentSheets,
+                            [activeTab]: {
+                                ...currentSheets[activeTab],
+                                rows: reindexed,
+                            },
+                        },
+                    };
+                }
+                return t;
+            });
+            saveStoredTopics(updated);
+            return updated;
+        });
+        showToast(`Deleted row ${index + 1}`);
     };
 
     // Save changes
@@ -249,7 +295,7 @@ export default function TopicSheetPage({ defaultTab }) {
                             {/* ← Back Button */}
                             <button
                                 type="button"
-                                onClick={() => navigate('/')}
+                                onClick={() => navigate('/', { state: { activeTab: requisitionType } })}
                                 className="px-3 sm:px-3.5 py-1.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all text-xs sm:text-sm font-medium shadow-2xs flex items-center gap-1.5 cursor-pointer"
                                 title="Back to Records"
                             >
@@ -303,17 +349,6 @@ export default function TopicSheetPage({ defaultTab }) {
                                     </button>
                                 )}
                             </div>
-
-                            {/* + Add Row Button */}
-                            <button
-                                type="button"
-                                onClick={handleAddRow}
-                                className="px-3 sm:px-4 py-1.5 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0"
-                                title="Add New Row"
-                            >
-                                <Plus className="w-4 h-4 stroke-[2.5]" />
-                                <span>Add Row</span>
-                            </button>
 
                             {/* Zoom Controls Pill: [ - | 100% | + ] */}
                             <div className="flex items-center rounded-xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs divide-x divide-slate-200/80 text-xs sm:text-sm flex-shrink-0">
@@ -372,6 +407,8 @@ export default function TopicSheetPage({ defaultTab }) {
                                         rows={currentSheet.rows}
                                         onFormChange={handleFormChange}
                                         onRowChange={handleRowChange}
+                                        onAddRow={handleAddRow}
+                                        onDeleteRow={handleDeleteRow}
                                         searchQuery={searchQuery}
                                     />
                                 ) : (
@@ -382,6 +419,8 @@ export default function TopicSheetPage({ defaultTab }) {
                                         rows={currentSheet.rows}
                                         onFormChange={handleFormChange}
                                         onRowChange={handleRowChange}
+                                        onAddRow={handleAddRow}
+                                        onDeleteRow={handleDeleteRow}
                                         searchQuery={searchQuery}
                                         hasCompanyHeader={activeTab === 'Sheet 2'}
                                     />

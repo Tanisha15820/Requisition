@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import {
@@ -25,6 +25,7 @@ import {
 
 export default function RequisitionTablePage() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     // 1. Sidebar collapse state & mobile drawer state
     const [collapsed, setCollapsed] = useState(false);
@@ -34,12 +35,12 @@ export default function RequisitionTablePage() {
     const [selectedUnit, setSelectedUnit] = useState('Bawal');
     const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
 
-    // 3. Requisition Type Tabs: 'Event Test Requisition' & 'General Test Requisition'
+    // 3. Requisition Type Tabs: 'General Test Requisition' placed first on far left, 'Event Test Requisition' directly to its right
     const REQUISITION_TABS = [
-        { id: 'Event Test Requisition', label: 'Event Test Requisition' },
         { id: 'General Test Requisition', label: 'General Test Requisition' },
+        { id: 'Event Test Requisition', label: 'Event Test Requisition' },
     ];
-    const [activeTab, setActiveTab] = useState('Event Test Requisition');
+    const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'General Test Requisition');
 
     // 4. Search query
     const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +61,7 @@ export default function RequisitionTablePage() {
 
     // 7. Add Requisition Modal state
     const [addModalOpen, setAddModalOpen] = useState(false);
-    const [newRequisitionType, setNewRequisitionType] = useState('Event Test Requisition');
+    const [newRequisitionType, setNewRequisitionType] = useState('General Test Requisition');
     const [newTopicName, setNewTopicName] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newDepartment, setNewDepartment] = useState('');
@@ -381,23 +382,31 @@ export default function RequisitionTablePage() {
                             </div>
                         </div>
 
-                        {/* 2. REQUISITION TABS: Directly below Unit dropdown, matching reference style */}
-                        <div className="flex items-center no-print">
-                            <div className="bg-[#F8FAFC] sm:bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1 inline-flex items-center gap-1 sm:gap-1.5 shadow-2xs">
+                        {/* 2. REQUISITION TABS: 'General Test Requisition' first on far left, 'Event Test Requisition' directly to its right */}
+                        <div className="flex items-center no-print max-w-full overflow-x-auto scrollbar-none pb-0.5">
+                            <div
+                                role="tablist"
+                                aria-label="Requisition Type Tabs"
+                                className="bg-[#F8FAFC] sm:bg-slate-50/80 border border-slate-200/90 rounded-2xl p-1 inline-flex items-center gap-1 sm:gap-1.5 shadow-2xs flex-nowrap"
+                            >
                                 {REQUISITION_TABS.map((tab) => {
                                     const isActive = activeTab === tab.id;
                                     return (
                                         <button
                                             key={tab.id}
+                                            role="tab"
+                                            aria-selected={isActive}
+                                            id={`tab-${tab.id.toLowerCase().replace(/\s+/g, '-')}`}
                                             type="button"
                                             onClick={() => {
                                                 setActiveTab(tab.id);
                                                 showToast(`Showing: ${tab.label}`);
                                             }}
-                                            className={`px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${isActive
-                                                    ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs'
+                                            className={`px-3.5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap select-none flex-shrink-0 ${
+                                                isActive
+                                                    ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
                                                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent font-medium'
-                                                }`}
+                                            }`}
                                         >
                                             {tab.label}
                                         </button>
@@ -808,8 +817,8 @@ export default function RequisitionTablePage() {
                                     onChange={(e) => setNewRequisitionType(e.target.value)}
                                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                 >
-                                    <option value="Event Test Requisition">Event Test Requisition</option>
                                     <option value="General Test Requisition">General Test Requisition</option>
+                                    <option value="Event Test Requisition">Event Test Requisition</option>
                                 </select>
                             </div>
 

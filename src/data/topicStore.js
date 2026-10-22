@@ -16,9 +16,9 @@ export const createEmptyFormData = () => ({
     approvedBy: '',
 });
 
-export const createEmptyRows = (count = 18) =>
-    Array.from({ length: count }, () => ({
-        sNo: '',
+export const createEmptyRows = (count = 5) =>
+    Array.from({ length: count }, (_, idx) => ({
+        sNo: `${idx + 1}`,
         characteristics: '',
         specified: '',
         actual: '',
@@ -66,9 +66,9 @@ export const createEmptySheet3FormData = () => ({
     approvedBy: '',
 });
 
-export const createEmptySheet3Rows = (count = 18) =>
-    Array.from({ length: count }, () => ({
-        sNo: '',
+export const createEmptySheet3Rows = (count = 5) =>
+    Array.from({ length: count }, (_, idx) => ({
+        sNo: `${idx + 1}`,
         requiredTest: '',
         standardName: '',
         actual: '',
@@ -79,15 +79,15 @@ export const createEmptySheet3Rows = (count = 18) =>
 export const createBlankTopicSheets = () => ({
     'Sheet 1': {
         formData: createEmptyFormData(),
-        rows: createEmptyRows(18),
+        rows: createEmptyRows(5),
     },
     'Sheet 2': {
         formData: createEmptyFormData(),
-        rows: createEmptyRows(18),
+        rows: createEmptyRows(5),
     },
     'Sheet 3': {
         formData: createEmptySheet3FormData(),
-        rows: createEmptySheet3Rows(18),
+        rows: createEmptySheet3Rows(5),
     },
 });
 
@@ -270,18 +270,20 @@ export function loadStoredTopics() {
                     } else {
                         let sheetsUpdated = false;
                         const sheets = { ...item.sheets };
-                        if (!sheets['Sheet 1']) {
-                            sheets['Sheet 1'] = defaultSheets['Sheet 1'];
-                            sheetsUpdated = true;
-                        }
-                        if (!sheets['Sheet 2']) {
-                            sheets['Sheet 2'] = defaultSheets['Sheet 2'];
-                            sheetsUpdated = true;
-                        }
-                        if (!sheets['Sheet 3']) {
-                            sheets['Sheet 3'] = defaultSheets['Sheet 3'];
-                            sheetsUpdated = true;
-                        }
+                        ['Sheet 1', 'Sheet 2', 'Sheet 3'].forEach((sKey) => {
+                            if (!sheets[sKey]) {
+                                sheets[sKey] = defaultSheets[sKey];
+                                sheetsUpdated = true;
+                            } else if (Array.isArray(sheets[sKey].rows)) {
+                                sheets[sKey] = {
+                                    ...sheets[sKey],
+                                    rows: sheets[sKey].rows.map((r, idx) => ({
+                                        ...r,
+                                        sNo: `${idx + 1}`,
+                                    })),
+                                };
+                            }
+                        });
                         if (sheetsUpdated) {
                             item = { ...item, sheets };
                             updated = true;
