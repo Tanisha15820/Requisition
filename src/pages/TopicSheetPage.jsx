@@ -148,11 +148,14 @@ export default function TopicSheetPage({ defaultTab }) {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
                     const isSheet3 = activeTab === 'Sheet 3';
-                    const currentRows = [...normalizeSheetRows(currentSheets[activeTab]?.rows, isSheet3)];
-                    currentRows[index] = {
-                        ...currentRows[index],
-                        [field]: value,
-                    };
+                    const existing = currentSheets[activeTab]?.rows || (isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5));
+                    const currentRows = [...existing];
+                    if (currentRows[index]) {
+                        currentRows[index] = {
+                            ...currentRows[index],
+                            [field]: value,
+                        };
+                    }
                     return {
                         ...t,
                         sheets: {
@@ -171,17 +174,20 @@ export default function TopicSheetPage({ defaultTab }) {
         });
     };
 
-    // Handler to insert a new blank row immediately above the specified row index
+    // Handler to insert a new blank row immediately below the specified row index
     const handleAddRow = (index) => {
         setTopics((prevTopics) => {
             const updated = prevTopics.map((t) => {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
                     const isSheet3 = activeTab === 'Sheet 3';
-                    const currentRows = [...normalizeSheetRows(currentSheets[activeTab]?.rows, isSheet3)];
+                    const existing = currentSheets[activeTab]?.rows || (isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5));
+                    const currentRows = [...existing];
+                    // Insert directly below the clicked row (at index + 1), or at 0 if table is empty
+                    const targetIdx = currentRows.length === 0 ? 0 : (typeof index === 'number' && index >= 0 ? index + 1 : currentRows.length);
                     const newRow = isSheet3
                         ? {
-                            sNo: `${index + 1}`,
+                            sNo: `${targetIdx + 1}`,
                             requiredTest: '',
                             standardName: '',
                             actual: '',
@@ -189,7 +195,7 @@ export default function TopicSheetPage({ defaultTab }) {
                             remarks: '',
                         }
                         : {
-                            sNo: `${index + 1}`,
+                            sNo: `${targetIdx + 1}`,
                             characteristics: '',
                             specified: '',
                             actual: '',
@@ -197,7 +203,7 @@ export default function TopicSheetPage({ defaultTab }) {
                             remarks: '',
                         };
 
-                    currentRows.splice(index, 0, newRow);
+                    currentRows.splice(targetIdx, 0, newRow);
                     const reindexed = currentRows.map((r, idx) => ({
                         ...r,
                         sNo: `${idx + 1}`,
@@ -219,7 +225,7 @@ export default function TopicSheetPage({ defaultTab }) {
             saveStoredTopics(updated);
             return updated;
         });
-        showToast(`Inserted a new row above row ${index + 1}`);
+        showToast(typeof index === 'number' && index >= 0 ? `Inserted a new row below row ${index + 1}` : 'Added row');
     };
 
     // Handler to delete a specific row by index
@@ -229,16 +235,13 @@ export default function TopicSheetPage({ defaultTab }) {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
                     const isSheet3 = activeTab === 'Sheet 3';
-                    let currentRows = [...normalizeSheetRows(currentSheets[activeTab]?.rows, isSheet3)];
+                    const existing = currentSheets[activeTab]?.rows || (isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5));
+                    const currentRows = [...existing];
+                    
+                    // Completely remove the target row from array
                     currentRows.splice(index, 1);
 
-                    if (currentRows.length === 0) {
-                        const blankRow = isSheet3
-                            ? { sNo: '1', requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }
-                            : { sNo: '1', characteristics: '', specified: '', actual: '', status: '', remarks: '' };
-                        currentRows = [blankRow];
-                    }
-
+                    // Re-index remaining rows sequentially so sNo reflects new order
                     const reindexed = currentRows.map((r, idx) => ({
                         ...r,
                         sNo: `${idx + 1}`,

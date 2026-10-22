@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import DatePickerInput from './DatePickerInput';
 import TimePickerInput from './TimePickerInput';
+import AutoResizeCell from './AutoResizeCell';
 
 export default function QASheetTable({
     sheetType = 'Sheet 1',
@@ -15,16 +16,18 @@ export default function QASheetTable({
     searchQuery = '',
     hasCompanyHeader = false,
 }) {
-    // S.No. table displays active rows, defaulting to 5 blank rows if empty
+    // S.No. table displays active rows, defaulting to 5 blank rows only if rows prop is not provided
     const displayRows = React.useMemo(() => {
-        if (Array.isArray(rows) && rows.length > 0) {
-            const isAllBlank = rows.every((r) => {
-                const { sNo, ...rest } = r;
-                return Object.values(rest).every((v) => !v || String(v).trim() === '');
-            });
+        if (Array.isArray(rows)) {
             // If rows were initialized with legacy 18 blank rows, clamp to default 5
-            if (rows.length === 18 && isAllBlank) {
-                return rows.slice(0, 5).map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
+            if (rows.length === 18) {
+                const isAllBlank = rows.every((r) => {
+                    const { sNo, ...rest } = r;
+                    return Object.values(rest).every((v) => !v || String(v).trim() === '');
+                });
+                if (isAllBlank) {
+                    return rows.slice(0, 5).map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
+                }
             }
             return rows;
         }
@@ -61,6 +64,13 @@ export default function QASheetTable({
             (row.status && row.status.toLowerCase().includes(q)) ||
             (row.remarks && row.remarks.toLowerCase().includes(q))
         );
+    };
+
+    const handleCellClick = (e) => {
+        const el = e.currentTarget.querySelector('textarea, input');
+        if (el && document.activeElement !== el) {
+            el.focus();
+        }
     };
 
     return (
@@ -363,7 +373,27 @@ export default function QASheetTable({
                 </tr>
 
                 {/* S.No. Data Rows */}
-                {displayRows.map((row, idx) => {
+                {displayRows.length === 0 ? (
+                    <tr>
+                        <td
+                            colSpan={10}
+                            className="border-b border-black py-5 text-center text-slate-500 bg-slate-50/40"
+                        >
+                            <div className="flex flex-col items-center justify-center gap-1.5 py-1">
+                                <span className="text-xs text-slate-500 font-medium">No rows in table.</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAdd(0)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors cursor-pointer shadow-2xs"
+                                >
+                                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                    <span>Add Row</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                ) : (
+                    displayRows.map((row, idx) => {
                     const matched = isRowMatch(row);
                     return (
                         <tr
@@ -371,14 +401,14 @@ export default function QASheetTable({
                             className={matched ? 'bg-amber-100/70 transition-colors' : 'hover:bg-blue-50/20'}
                         >
                             {/* Actions Column */}
-                            <td className="border-b border-r border-black p-1 align-middle text-center bg-white">
+                            <td className="border-b border-r border-black p-1 align-top text-center bg-white">
                                 <div className="flex flex-col items-center justify-center gap-1 py-1">
                                     <button
                                         type="button"
                                         onClick={() => handleAdd(idx)}
                                         className="w-6 h-6 rounded-md border border-slate-300 bg-white hover:bg-blue-50 hover:border-blue-400 text-slate-500 hover:text-blue-600 flex items-center justify-center transition-colors cursor-pointer shadow-2xs group focus:outline-none"
-                                        title="Insert row above"
-                                        aria-label={`Insert row above row ${idx + 1}`}
+                                        title="Insert row below"
+                                        aria-label={`Insert row below row ${idx + 1}`}
                                     >
                                         <Plus className="w-3.5 h-3.5 stroke-[2] text-slate-500 group-hover:text-blue-600 transition-colors" />
                                     </button>
@@ -395,68 +425,90 @@ export default function QASheetTable({
                             </td>
 
                             {/* S. No. */}
-                            <td className="border-b border-r border-black p-0 align-middle">
-                                <input
-                                    type="text"
+                            <td
+                                onClick={handleCellClick}
+                                className="border-b border-r border-black p-0 align-top cursor-text"
+                            >
+                                <AutoResizeCell
                                     value={row.sNo || `${idx + 1}`}
                                     placeholder={`${idx + 1}`}
                                     onChange={(e) => onRowChange(idx, 'sNo', e.target.value)}
-                                    className="w-full h-full bg-transparent border-0 outline-none px-1 text-center text-black font-normal text-[12px] focus:bg-blue-50/40"
+                                    textAlign="center"
+                                    ariaLabel={`Row ${idx + 1} serial number`}
                                 />
                             </td>
 
                             {/* Characteristics (spans 2 cols) */}
-                            <td colSpan={2} className="border-b border-r border-black p-0 align-middle">
-                                <input
-                                    type="text"
+                            <td
+                                colSpan={2}
+                                onClick={handleCellClick}
+                                className="border-b border-r border-black p-0 align-top cursor-text"
+                            >
+                                <AutoResizeCell
                                     value={row.characteristics || ''}
                                     onChange={(e) => onRowChange(idx, 'characteristics', e.target.value)}
-                                    className="w-full h-full bg-transparent border-0 outline-none px-1.5 text-left text-black font-normal text-[12px] focus:bg-blue-50/40"
+                                    textAlign="left"
+                                    ariaLabel={`Row ${idx + 1} characteristics`}
                                 />
                             </td>
 
                             {/* Specified (spans 2 cols) */}
-                            <td colSpan={2} className="border-b border-r border-black p-0 align-middle">
-                                <input
-                                    type="text"
+                            <td
+                                colSpan={2}
+                                onClick={handleCellClick}
+                                className="border-b border-r border-black p-0 align-top cursor-text"
+                            >
+                                <AutoResizeCell
                                     value={row.specified || ''}
                                     onChange={(e) => onRowChange(idx, 'specified', e.target.value)}
-                                    className="w-full h-full bg-transparent border-0 outline-none px-1 text-center text-black font-normal text-[12px] focus:bg-blue-50/40"
+                                    textAlign="center"
+                                    ariaLabel={`Row ${idx + 1} specified`}
                                 />
                             </td>
 
                             {/* Actual (spans 2 cols) */}
-                            <td colSpan={2} className="border-b border-r border-black p-0 align-middle">
-                                <input
-                                    type="text"
+                            <td
+                                colSpan={2}
+                                onClick={handleCellClick}
+                                className="border-b border-r border-black p-0 align-top cursor-text"
+                            >
+                                <AutoResizeCell
                                     value={row.actual || ''}
                                     onChange={(e) => onRowChange(idx, 'actual', e.target.value)}
-                                    className="w-full h-full bg-transparent border-0 outline-none px-1 text-center text-black font-normal text-[12px] focus:bg-blue-50/40"
+                                    textAlign="center"
+                                    ariaLabel={`Row ${idx + 1} actual`}
                                 />
                             </td>
 
                             {/* Status (1 col) */}
-                            <td className="border-b border-r border-black p-0 align-middle">
-                                <input
-                                    type="text"
+                            <td
+                                onClick={handleCellClick}
+                                className="border-b border-r border-black p-0 align-top cursor-text"
+                            >
+                                <AutoResizeCell
                                     value={row.status || ''}
                                     onChange={(e) => onRowChange(idx, 'status', e.target.value)}
-                                    className="w-full h-full bg-transparent border-0 outline-none px-1 text-center text-black font-normal text-[12px] focus:bg-blue-50/40"
+                                    textAlign="center"
+                                    ariaLabel={`Row ${idx + 1} status`}
                                 />
                             </td>
 
                             {/* Remarks (1 col) */}
-                            <td className="border-b border-black p-0 align-middle">
-                                <input
-                                    type="text"
+                            <td
+                                onClick={handleCellClick}
+                                className="border-b border-black p-0 align-top cursor-text"
+                            >
+                                <AutoResizeCell
                                     value={row.remarks || ''}
                                     onChange={(e) => onRowChange(idx, 'remarks', e.target.value)}
-                                    className="w-full h-full bg-transparent border-0 outline-none px-1 text-left text-black font-normal text-[12px] focus:bg-blue-50/40"
+                                    textAlign="left"
+                                    ariaLabel={`Row ${idx + 1} remarks`}
                                 />
                             </td>
                         </tr>
-                    );
-                })}
+                        );
+                    })
+                )}
 
                 {/* FOOTER ROW 1: Headers (Deptt:, REQUEST BY:, APPROVED BY:) */}
                 <tr style={{ height: '22px' }} className="text-[12px] bg-slate-50/40">
@@ -481,38 +533,44 @@ export default function QASheetTable({
                 </tr>
 
                 {/* FOOTER ROW 2: Signature Space */}
-                <tr style={{ height: '42px' }}>
+                <tr>
                     <td
                         colSpan={2}
-                        className="border-b border-r border-black p-1 align-bottom text-center"
+                        onClick={handleCellClick}
+                        className="border-b border-r border-black p-0 align-top cursor-text"
                     >
-                        <input
-                            type="text"
+                        <AutoResizeCell
                             value={formData.deptt || ''}
                             onChange={(e) => onFormChange('deptt', e.target.value)}
-                            className="w-full bg-transparent border-0 outline-none text-center text-[12px] font-normal text-black focus:bg-blue-50/40"
+                            minHeight={42}
+                            textAlign="center"
+                            ariaLabel="Department"
                         />
                     </td>
                     <td
                         colSpan={4}
-                        className="border-b border-r border-black p-1 align-bottom text-center"
+                        onClick={handleCellClick}
+                        className="border-b border-r border-black p-0 align-top cursor-text"
                     >
-                        <input
-                            type="text"
+                        <AutoResizeCell
                             value={formData.requestBy || ''}
                             onChange={(e) => onFormChange('requestBy', e.target.value)}
-                            className="w-full bg-transparent border-0 outline-none text-center text-[12px] font-normal text-black focus:bg-blue-50/40"
+                            minHeight={42}
+                            textAlign="center"
+                            ariaLabel="Requested by"
                         />
                     </td>
                     <td
                         colSpan={4}
-                        className="border-b border-black p-1 align-bottom text-center"
+                        onClick={handleCellClick}
+                        className="border-b border-black p-0 align-top cursor-text"
                     >
-                        <input
-                            type="text"
-                            value={formData.approvedBy || ''}
+                        <AutoResizeCell
+                            value={formData.approvedBy && formData.approvedBy !== 'Yadvendar Yadav' ? formData.approvedBy : ''}
                             onChange={(e) => onFormChange('approvedBy', e.target.value)}
-                            className="w-full bg-transparent border-0 outline-none text-center text-[12px] font-normal text-black focus:bg-blue-50/40"
+                            minHeight={42}
+                            textAlign="center"
+                            ariaLabel="Approved by"
                         />
                     </td>
                 </tr>

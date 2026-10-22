@@ -270,7 +270,9 @@ export default function QARequisitionPage({ defaultTab = 'General Test Requisiti
                 }
             });
 
-            csv += `\n"Deptt:","${formData.deptt || ''}","Request By:","${formData.requestBy || ''}","Checked By:","${formData.checkedBy || ''}","Verified By:","${formData.verifiedBy || 'Pankaj Kamra'}","Approved By:","${formData.approvedBy || 'Yadvendar Yadav'}"\n`;
+            const vBy = (formData.verifiedBy && formData.verifiedBy !== 'Pankaj Kamra') ? formData.verifiedBy : '';
+            const aBy = (formData.approvedBy && formData.approvedBy !== 'Yadvendar Yadav') ? formData.approvedBy : '';
+            csv += `\n"Deptt:","${formData.deptt || ''}","Request By:","${formData.requestBy || ''}","Checked By:","${formData.checkedBy || ''}","Verified By:","${vBy}","Approved By:","${aBy}"\n`;
         } else {
             csv += `"Q.A. LAB REQUISITION SLIP - GENERAL TEST REQUISITION (${selectedUnit.toUpperCase()})"\n`;
             csv += `"Date:","${formData.date || ''}","Time:","${formData.time || ''}"\n`;
@@ -302,18 +304,20 @@ export default function QARequisitionPage({ defaultTab = 'General Test Requisiti
         showToast(`Exported ${selectedUnit} ${activeTab} to CSV successfully!`);
     };
 
-    // Handler to insert a new blank row immediately above the specified row index
+    // Handler to insert a new blank row immediately below the specified row index
     const handleAddRow = (index) => {
         if (!selectedUnit) return;
         setUnitData((prev) => {
             const unitObj = prev[selectedUnit] || {};
             const sheetObj = unitObj[activeTab] || {};
             const currentRows = [...(sheetObj.rows || [])];
+            // Insert directly below the clicked row (at index + 1), or at 0 if table is empty
+            const targetIdx = currentRows.length === 0 ? 0 : (typeof index === 'number' && index >= 0 ? index + 1 : currentRows.length);
 
             const isSheet3 = activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3';
             const newRow = isSheet3
                 ? {
-                    sNo: `${index + 1}`,
+                    sNo: `${targetIdx + 1}`,
                     requiredTest: '',
                     standardName: '',
                     actual: '',
@@ -321,7 +325,7 @@ export default function QARequisitionPage({ defaultTab = 'General Test Requisiti
                     remarks: '',
                 }
                 : {
-                    sNo: `${index + 1}`,
+                    sNo: `${targetIdx + 1}`,
                     characteristics: '',
                     specified: '',
                     actual: '',
@@ -329,7 +333,7 @@ export default function QARequisitionPage({ defaultTab = 'General Test Requisiti
                     remarks: '',
                 };
 
-            currentRows.splice(index, 0, newRow);
+            currentRows.splice(targetIdx, 0, newRow);
             const reindexed = currentRows.map((r, idx) => ({
                 ...r,
                 sNo: `${idx + 1}`,
@@ -346,7 +350,7 @@ export default function QARequisitionPage({ defaultTab = 'General Test Requisiti
                 },
             };
         });
-        showToast(`Inserted a new row above row ${index + 1}`);
+        showToast(typeof index === 'number' && index >= 0 ? `Inserted a new row below row ${index + 1}` : 'Added row');
     };
 
     // Handler to delete a specific row by index
@@ -357,14 +361,6 @@ export default function QARequisitionPage({ defaultTab = 'General Test Requisiti
             const sheetObj = unitObj[activeTab] || {};
             let currentRows = [...(sheetObj.rows || [])];
             currentRows.splice(index, 1);
-
-            const isSheet3 = activeTab === 'Event Test Requisition' || activeTab === 'Sheet 3';
-            if (currentRows.length === 0) {
-                const blankRow = isSheet3
-                    ? { sNo: '1', requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }
-                    : { sNo: '1', characteristics: '', specified: '', actual: '', status: '', remarks: '' };
-                currentRows = [blankRow];
-            }
 
             const reindexed = currentRows.map((r, idx) => ({
                 ...r,

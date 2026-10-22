@@ -253,49 +253,26 @@ const DEFAULT_TOPICS = [
 ];
 
 export function normalizeSheetRows(rows, isSheet3 = false) {
-    if (!Array.isArray(rows) || rows.length === 0) {
+    if (!Array.isArray(rows)) {
         return isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5);
     }
 
-    const isRowEmpty = (r) => {
-        if (!r) return true;
-        const { sNo, ...rest } = r;
-        return Object.values(rest).every((v) => !v || String(v).trim() === '');
-    };
-
-    const allEmpty = rows.every(isRowEmpty);
-
-    // If all rows are empty, reset to exactly 5 empty rows
-    if (allEmpty) {
-        return isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5);
-    }
-
-    // If rows were initialized with the legacy 18 rows, trim trailing empty rows (minimum 5)
+    // If rows were initialized with legacy 18 blank rows, clamp to default 5
     if (rows.length === 18) {
-        let lastFilledIdx = -1;
-        for (let i = rows.length - 1; i >= 0; i--) {
-            if (!isRowEmpty(rows[i])) {
-                lastFilledIdx = i;
-                break;
-            }
+        const isAllBlank = rows.every((r) => {
+            const { sNo, ...rest } = r;
+            return Object.values(rest).every((v) => !v || String(v).trim() === '');
+        });
+        if (isAllBlank) {
+            return isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5);
         }
-        const targetCount = Math.max(5, lastFilledIdx + 1);
-        const trimmed = rows.slice(0, targetCount).map((r, idx) => ({
-            ...r,
-            sNo: `${idx + 1}`,
-        }));
-        while (trimmed.length < 5) {
-            const nextIdx = trimmed.length;
-            trimmed.push(
-                isSheet3
-                    ? { sNo: `${nextIdx + 1}`, requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }
-                    : { sNo: `${nextIdx + 1}`, characteristics: '', specified: '', actual: '', status: '', remarks: '' }
-            );
-        }
-        return trimmed.map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
     }
 
-    return rows.map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
+    // Always re-index sNo sequentially to match current array positions
+    return rows.map((r, idx) => ({
+        ...r,
+        sNo: `${idx + 1}`,
+    }));
 }
 
 const STORAGE_KEY = 'pdca_requisition_topics_v2';
@@ -334,9 +311,23 @@ export function loadStoredTopics() {
                                 ) {
                                     sheetsUpdated = true;
                                 }
+                                const currentFormData = sheets[sKey].formData || {};
+                                let newFormData = currentFormData;
+                                if (
+                                    currentFormData.verifiedBy === 'Pankaj Kamra' ||
+                                    currentFormData.approvedBy === 'Yadvendar Yadav'
+                                ) {
+                                    newFormData = {
+                                        ...currentFormData,
+                                        verifiedBy: currentFormData.verifiedBy === 'Pankaj Kamra' ? '' : currentFormData.verifiedBy,
+                                        approvedBy: currentFormData.approvedBy === 'Yadvendar Yadav' ? '' : currentFormData.approvedBy,
+                                    };
+                                    sheetsUpdated = true;
+                                }
                                 sheets[sKey] = {
                                     ...sheets[sKey],
                                     rows: normalizedRows,
+                                    formData: newFormData,
                                 };
                             }
                         });
