@@ -10,6 +10,7 @@ import {
     createEmptyRows,
     createEmptySheet3FormData,
     createEmptySheet3Rows,
+    normalizeSheetRows,
 } from '../data/topicStore';
 import {
     ArrowLeft,
@@ -103,11 +104,15 @@ export default function TopicSheetPage({ defaultTab }) {
 
     // Ensure topic has sheets object initialized
     const sheetsData = currentTopic.sheets || createBlankTopicSheets();
-    const currentSheet =
+    const rawSheet =
         sheetsData[activeTab] ||
         (activeTab === 'Sheet 3'
             ? { formData: createEmptySheet3FormData(), rows: createEmptySheet3Rows(5) }
             : { formData: createEmptyFormData(), rows: createEmptyRows(5) });
+    const currentSheet = {
+        ...rawSheet,
+        rows: normalizeSheetRows(rawSheet.rows, activeTab === 'Sheet 3'),
+    };
 
     // Handler to update form data for the active sheet in this topic
     const handleFormChange = (field, value) => {
@@ -142,7 +147,8 @@ export default function TopicSheetPage({ defaultTab }) {
             const updated = prevTopics.map((t) => {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
-                    const currentRows = [...currentSheets[activeTab].rows];
+                    const isSheet3 = activeTab === 'Sheet 3';
+                    const currentRows = [...normalizeSheetRows(currentSheets[activeTab]?.rows, isSheet3)];
                     currentRows[index] = {
                         ...currentRows[index],
                         [field]: value,
@@ -171,8 +177,8 @@ export default function TopicSheetPage({ defaultTab }) {
             const updated = prevTopics.map((t) => {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
-                    const currentRows = [...(currentSheets[activeTab]?.rows || [])];
                     const isSheet3 = activeTab === 'Sheet 3';
+                    const currentRows = [...normalizeSheetRows(currentSheets[activeTab]?.rows, isSheet3)];
                     const newRow = isSheet3
                         ? {
                             sNo: `${index + 1}`,
@@ -222,10 +228,10 @@ export default function TopicSheetPage({ defaultTab }) {
             const updated = prevTopics.map((t) => {
                 if (t.id === currentTopic.id) {
                     const currentSheets = t.sheets || createBlankTopicSheets();
-                    let currentRows = [...(currentSheets[activeTab]?.rows || [])];
+                    const isSheet3 = activeTab === 'Sheet 3';
+                    let currentRows = [...normalizeSheetRows(currentSheets[activeTab]?.rows, isSheet3)];
                     currentRows.splice(index, 1);
 
-                    const isSheet3 = activeTab === 'Sheet 3';
                     if (currentRows.length === 0) {
                         const blankRow = isSheet3
                             ? { sNo: '1', requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }

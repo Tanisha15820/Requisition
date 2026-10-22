@@ -252,11 +252,61 @@ const DEFAULT_TOPICS = [
     },
 ];
 
-const STORAGE_KEY = 'pdca_requisition_topics_v1';
+export function normalizeSheetRows(rows, isSheet3 = false) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5);
+    }
+
+    const isRowEmpty = (r) => {
+        if (!r) return true;
+        const { sNo, ...rest } = r;
+        return Object.values(rest).every((v) => !v || String(v).trim() === '');
+    };
+
+    const allEmpty = rows.every(isRowEmpty);
+
+    // If all rows are empty, reset to exactly 5 empty rows
+    if (allEmpty) {
+        return isSheet3 ? createEmptySheet3Rows(5) : createEmptyRows(5);
+    }
+
+    // If rows were initialized with the legacy 18 rows, trim trailing empty rows (minimum 5)
+    if (rows.length === 18) {
+        let lastFilledIdx = -1;
+        for (let i = rows.length - 1; i >= 0; i--) {
+            if (!isRowEmpty(rows[i])) {
+                lastFilledIdx = i;
+                break;
+            }
+        }
+        const targetCount = Math.max(5, lastFilledIdx + 1);
+        const trimmed = rows.slice(0, targetCount).map((r, idx) => ({
+            ...r,
+            sNo: `${idx + 1}`,
+        }));
+        while (trimmed.length < 5) {
+            const nextIdx = trimmed.length;
+            trimmed.push(
+                isSheet3
+                    ? { sNo: `${nextIdx + 1}`, requiredTest: '', standardName: '', actual: '', status: '', remarks: '' }
+                    : { sNo: `${nextIdx + 1}`, characteristics: '', specified: '', actual: '', status: '', remarks: '' }
+            );
+        }
+        return trimmed.map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
+    }
+
+    return rows.map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
+}
+
+const STORAGE_KEY = 'pdca_requisition_topics_v2';
+const LEGACY_STORAGE_KEY = 'pdca_requisition_topics_v1';
 
 export function loadStoredTopics() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+            raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+        }
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -271,16 +321,22 @@ export function loadStoredTopics() {
                         let sheetsUpdated = false;
                         const sheets = { ...item.sheets };
                         ['Sheet 1', 'Sheet 2', 'Sheet 3'].forEach((sKey) => {
+                            const isSheet3 = sKey === 'Sheet 3';
                             if (!sheets[sKey]) {
                                 sheets[sKey] = defaultSheets[sKey];
                                 sheetsUpdated = true;
-                            } else if (Array.isArray(sheets[sKey].rows)) {
+                            } else {
+                                const normalizedRows = normalizeSheetRows(sheets[sKey].rows, isSheet3);
+                                if (
+                                    !Array.isArray(sheets[sKey].rows) ||
+                                    sheets[sKey].rows.length !== normalizedRows.length ||
+                                    sheets[sKey].rows.length === 18
+                                ) {
+                                    sheetsUpdated = true;
+                                }
                                 sheets[sKey] = {
                                     ...sheets[sKey],
-                                    rows: sheets[sKey].rows.map((r, idx) => ({
-                                        ...r,
-                                        sNo: `${idx + 1}`,
-                                    })),
+                                    rows: normalizedRows,
                                 };
                             }
                         });
@@ -337,3 +393,4 @@ export function saveStoredTopics(topics) {
         // Ignore quota errors
     }
 }
+

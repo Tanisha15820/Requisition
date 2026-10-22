@@ -18,6 +18,14 @@ export default function QASheetTable({
     // S.No. table displays active rows, defaulting to 5 blank rows if empty
     const displayRows = React.useMemo(() => {
         if (Array.isArray(rows) && rows.length > 0) {
+            const isAllBlank = rows.every((r) => {
+                const { sNo, ...rest } = r;
+                return Object.values(rest).every((v) => !v || String(v).trim() === '');
+            });
+            // If rows were initialized with legacy 18 blank rows, clamp to default 5
+            if (rows.length === 18 && isAllBlank) {
+                return rows.slice(0, 5).map((r, idx) => ({ ...r, sNo: `${idx + 1}` }));
+            }
             return rows;
         }
         return Array.from({ length: 5 }, (_, idx) => ({
